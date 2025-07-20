@@ -14,12 +14,3 @@ h1 {
     height: 1000px;
     width: 100%;
 }
-
-#street-view-container {
-    margin: 20px auto;
-    max-width: 800px;
-    background: #fff;
-    padding: 10px;
-    border-radius: 10px;
-    box-shadow: 0 0 10px rgba(0,0,0,0.1);
-}
