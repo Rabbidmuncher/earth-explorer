@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Earth Explorer</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="style.css">
+    <link 
+        rel="stylesheet" 
+        href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" 
+        integrity="sha256-xodZBNTC5n17Xt2atTPuE1HxjVMSvLVW9ocqUKLsCC0=" 
+        crossorigin=""
+    />
+</head>
+<body>
+    <h1>🌍 Earth Explorer by Rabbidmuncher</h1>
+    <div id="map"></div>
+    <div id="street-view-container">
+        <h2>Street View</h2>
+        <iframe
+            id="street-view"
+            width="100%"
+            height="400"
+            loading="lazy"
+            allowfullscreen
+            referrerpolicy="no-referrer-when-downgrade"
+            src="https://www.google.com/maps/embed?pb=!4v0!6m8!1m7!1sCAoSLEFGMVFpcE1Za2hRVXlCS2FVdUVBZWwzZEYxYzN5UVlyc2dVR3J2eXhjbFZn!2m2!1d37.7749!2d-122.4194!3f0!4f0!5f0.7820865974627469"
+        ></iframe>
+    </div>
+
+    <script 
+        src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" 
+        integrity="sha256-o9N1j6kG8zRKvU15GFez4P3lN1R9OfLxT19I4GG4H/k=" 
+        crossorigin=""
+    ></script>
+    <script src="script.js"></script>
+</body>
+</html>

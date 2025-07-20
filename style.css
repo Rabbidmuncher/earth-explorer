@@ -1,0 +1,25 @@
+body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    text-align: center;
+    background: #f9f9f9;
+}
+
+h1 {
+    margin: 20px 0;
+    color: #333;
+}
+
+#map {
+    height: 500px;
+    width: 100%;
+}
+
+#street-view-container {
+    margin: 20px auto;
+    max-width: 800px;
+    background: #fff;
+    padding: 10px;
+    border-radius: 10px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+}
