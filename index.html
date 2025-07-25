@@ -34,6 +34,7 @@
     }).addTo(map);
 
     const gridLayer = L.layerGroup().addTo(map);
+    const landCache = {}; // Cache for land/water checks
 
     const GRID_SIZE_METERS = 300;
 
@@ -52,23 +53,50 @@
         const stepLng = metersToDegreesLng(GRID_SIZE_METERS, lat);
 
         for (let lng = Math.floor(sw.lng / stepLng) * stepLng; lng < ne.lng; lng += stepLng) {
-          const square = L.rectangle([
-            [lat, lng],
-            [lat + stepLat, lng + stepLng]
-          ], {
-            className: 'grid-square',
-            color: '#000',
-            weight: 0.5,
-            fillOpacity: 0
-          });
+          const centerLat = lat + stepLat / 2;
+          const centerLng = lng + stepLng / 2;
+          const key = `${centerLat.toFixed(5)},${centerLng.toFixed(5)}`;
 
-          square.on('click', function () {
-            square.setStyle({ fillColor: 'yellow', fillOpacity: 0.4 });
-            square.bindPopup("This square is unclaimed. You can buy it!").openPopup();
-          });
-
-          gridLayer.addLayer(square);
+          if (landCache[key] === true) {
+            drawSquare(lat, lng, stepLat, stepLng);
+          } else if (landCache[key] === undefined) {
+            // Delay drawing until checked
+            checkIfLand(centerLat, centerLng).then(isLand => {
+              landCache[key] = isLand;
+              if (isLand) drawSquare(lat, lng, stepLat, stepLng);
+            });
+          }
         }
+      }
+    }
+
+    function drawSquare(lat, lng, stepLat, stepLng) {
+      const square = L.rectangle([
+        [lat, lng],
+        [lat + stepLat, lng + stepLng]
+      ], {
+        className: 'grid-square',
+        color: '#000',
+        weight: 0.5,
+        fillOpacity: 0
+      });
+
+      square.on('click', function () {
+        square.setStyle({ fillColor: 'yellow', fillOpacity: 0.4 });
+        square.bindPopup("This square is unclaimed. You can buy it!").openPopup();
+      });
+
+      gridLayer.addLayer(square);
+    }
+
+    async function checkIfLand(lat, lng) {
+      try {
+        const response = await fetch(`https://api.onwater.io/api/v1/results/${lat},${lng}`);
+        const data = await response.json();
+        return !data.water;
+      } catch (err) {
+        console.error('Land check failed:', err);
+        return false; // Assume water on error
       }
     }
 
