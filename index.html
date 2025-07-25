@@ -1,24 +1,86 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>Earth Explorer</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="style.css">
-    <link 
-        rel="stylesheet" 
-        href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" 
-        crossorigin=""
-    />
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Earth Explorer</title>
+  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
+  <style>
+    #map {
+      height: 100vh;
+      width: 100%;
+    }
+    .grid-square {
+      color: #000;
+      weight: 1;
+      fillOpacity: 0;
+    }
+    .grid-square.clicked {
+      fillColor: yellow;
+      fillOpacity: 0.4;
+    }
+  </style>
 </head>
 <body>
-    <h1>🌍 Earth Explorer by Rabbidmuncher</h1>
-    <div id="map"></div>
-   
-    <script 
-        src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" 
-        crossorigin=""
-    ></script>
-    <script src="script.js"></script>
+  <div id="map"></div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+  <script>
+    const map = L.map('map').setView([56.95, 24.1], 6); // Latvia center
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; OpenStreetMap contributors'
+    }).addTo(map);
+
+    const gridLayer = L.layerGroup().addTo(map);
+
+    const GRID_SIZE_METERS = 300;
+
+    function drawGrid() {
+      gridLayer.clearLayers();
+
+      if (map.getZoom() < 12) return;
+
+      const bounds = map.getBounds();
+      const sw = bounds.getSouthWest();
+      const ne = bounds.getNorthEast();
+
+      const stepLat = metersToDegreesLat(GRID_SIZE_METERS);
+
+      for (let lat = Math.floor(sw.lat / stepLat) * stepLat; lat < ne.lat; lat += stepLat) {
+        const stepLng = metersToDegreesLng(GRID_SIZE_METERS, lat);
+
+        for (let lng = Math.floor(sw.lng / stepLng) * stepLng; lng < ne.lng; lng += stepLng) {
+          const square = L.rectangle([
+            [lat, lng],
+            [lat + stepLat, lng + stepLng]
+          ], {
+            className: 'grid-square',
+            color: '#000',
+            weight: 0.5,
+            fillOpacity: 0
+          });
+
+          square.on('click', function () {
+            square.setStyle({ fillColor: 'yellow', fillOpacity: 0.4 });
+            square.bindPopup("This square is unclaimed. You can buy it!").openPopup();
+          });
+
+          gridLayer.addLayer(square);
+        }
+      }
+    }
+
+    function metersToDegreesLat(meters) {
+      return meters / 111320; // Roughly meters per degree latitude
+    }
+
+    function metersToDegreesLng(meters, latitude) {
+      return meters / (40075000 * Math.cos(latitude * Math.PI / 180) / 360);
+    }
+
+    map.on('moveend zoomend', drawGrid);
+  </script>
 </body>
 </html>
