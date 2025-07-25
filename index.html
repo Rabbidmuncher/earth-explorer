@@ -34,8 +34,6 @@
     }).addTo(map);
 
     const gridLayer = L.layerGroup().addTo(map);
-    const landCache = {}; // Cache for land/water checks
-
     const GRID_SIZE_METERS = 300;
 
     function drawGrid() {
@@ -53,19 +51,7 @@
         const stepLng = metersToDegreesLng(GRID_SIZE_METERS, lat);
 
         for (let lng = Math.floor(sw.lng / stepLng) * stepLng; lng < ne.lng; lng += stepLng) {
-          const centerLat = lat + stepLat / 2;
-          const centerLng = lng + stepLng / 2;
-          const key = `${centerLat.toFixed(5)},${centerLng.toFixed(5)}`;
-
-          if (landCache[key] === true) {
-            drawSquare(lat, lng, stepLat, stepLng);
-          } else if (landCache[key] === undefined) {
-            // Delay drawing until checked
-            checkIfLand(centerLat, centerLng).then(isLand => {
-              landCache[key] = isLand;
-              if (isLand) drawSquare(lat, lng, stepLat, stepLng);
-            });
-          }
+          drawSquare(lat, lng, stepLat, stepLng);
         }
       }
     }
@@ -81,9 +67,17 @@
         fillOpacity: 0
       });
 
-      square.on('click', function () {
-        square.setStyle({ fillColor: 'yellow', fillOpacity: 0.4 });
-        square.bindPopup("This square is unclaimed. You can buy it!").openPopup();
+      square.on('click', async function () {
+        const centerLat = lat + stepLat / 2;
+        const centerLng = lng + stepLng / 2;
+        const isLand = await checkIfLand(centerLat, centerLng);
+
+        if (isLand) {
+          square.setStyle({ fillColor: 'yellow', fillOpacity: 0.4 });
+          square.bindPopup("This square is unclaimed. You can buy it!").openPopup();
+        } else {
+          square.bindPopup("This square is in the ocean and cannot be claimed.").openPopup();
+        }
       });
 
       gridLayer.addLayer(square);
