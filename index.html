@@ -85,12 +85,12 @@
 
     async function checkIfLand(lat, lng) {
       try {
-        const response = await fetch(`https://api.onwater.io/api/v1/results/${lat},${lng}?access_token=a0118f7623msh55639d77b42576cp100af2jsnfdd163723680`);
+        const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`);
         const data = await response.json();
-        return !data.water;
+        return data.address && data.address.country; // land if part of a country
       } catch (err) {
         console.error('Land check failed:', err);
-        return false; // Assume water on error
+        return false;
       }
     }
 
