@@ -9,7 +9,6 @@
   <style>
     body {
       margin: 0;
-      display: flex;
     }
     #sidebar {
       width: 250px;
@@ -18,7 +17,10 @@
       padding: 10px;
       box-sizing: border-box;
       transition: transform 0.3s ease;
-      position: relative;
+      position: absolute;
+      left: 0;
+      top: 0;
+      bottom: 0;
       z-index: 999;
     }
     #sidebar.collapsed {
@@ -27,18 +29,18 @@
     #sidebar-toggle {
       position: absolute;
       bottom: 10px;
-      right: -35px;
+      left: 10px;
       background: #007bff;
       color: white;
       padding: 5px 10px;
       border: none;
       cursor: pointer;
       z-index: 1000;
-      border-radius: 0 5px 5px 0;
+      border-radius: 5px;
     }
     #map {
       height: 100vh;
-      flex: 1;
+      width: 100vw;
       z-index: 0;
     }
     .grid-square {
