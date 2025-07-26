@@ -35,6 +35,9 @@
 
     const gridLayer = L.layerGroup().addTo(map);
     const GRID_SIZE_METERS = 300;
+    let lastClickedSquare = null;
+    let lastClickTime = 0;
+    const CLICK_COOLDOWN_MS = 1000; // 1 second
 
     function drawGrid() {
       gridLayer.clearLayers();
@@ -68,13 +71,22 @@
       });
 
       square.on('click', async function () {
+        const now = Date.now();
+        if (now - lastClickTime < CLICK_COOLDOWN_MS) return;
+        lastClickTime = now;
+
         const centerLat = lat + stepLat / 2;
         const centerLng = lng + stepLng / 2;
         const isLand = await checkIfLand(centerLat, centerLng);
 
+        if (lastClickedSquare) {
+          lastClickedSquare.setStyle({ fillOpacity: 0 });
+        }
+
         if (isLand) {
           square.setStyle({ fillColor: 'yellow', fillOpacity: 0.4 });
           square.bindPopup("This square is unclaimed. You can buy it!").openPopup();
+          lastClickedSquare = square;
         } else {
           square.bindPopup("This square is in the ocean and cannot be claimed.").openPopup();
         }
