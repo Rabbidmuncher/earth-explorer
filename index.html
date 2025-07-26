@@ -27,7 +27,7 @@
       transform: translateX(-100%);
     }
     #sidebar-toggle {
-      position: absolute;
+      position: fixed;
       bottom: 10px;
       left: 10px;
       background: #007bff;
@@ -35,7 +35,7 @@
       padding: 5px 10px;
       border: none;
       cursor: pointer;
-      z-index: 1000;
+      z-index: 1001;
       border-radius: 5px;
     }
     #map {
@@ -62,8 +62,8 @@
       <li><a href="#">User Information</a></li>
       <li><a href="#">Terms and Conditions</a></li>
     </ul>
-    <button id="sidebar-toggle">☰</button>
   </div>
+  <button id="sidebar-toggle">☰</button>
   <div id="map"></div>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
