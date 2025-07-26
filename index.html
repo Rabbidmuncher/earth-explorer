@@ -49,11 +49,17 @@
       const ne = bounds.getNorthEast();
 
       const stepLat = metersToDegreesLat(GRID_SIZE_METERS);
+      const baseLat = Math.floor(sw.lat / stepLat) * stepLat;
+      const rows = Math.ceil((ne.lat - baseLat) / stepLat);
 
-      for (let lat = Math.floor(sw.lat / stepLat) * stepLat; lat < ne.lat; lat += stepLat) {
+      for (let i = 0; i < rows; i++) {
+        const lat = baseLat + i * stepLat;
         const stepLng = metersToDegreesLng(GRID_SIZE_METERS, lat);
+        const baseLng = Math.floor(sw.lng / stepLng) * stepLng;
+        const cols = Math.ceil((ne.lng - baseLng) / stepLng);
 
-        for (let lng = Math.floor(sw.lng / stepLng) * stepLng; lng < ne.lng; lng += stepLng) {
+        for (let j = 0; j < cols; j++) {
+          const lng = baseLng + j * stepLng;
           drawSquare(lat, lng, stepLat, stepLng);
         }
       }
@@ -107,7 +113,7 @@
     }
 
     function metersToDegreesLat(meters) {
-      return meters / 111320; // Roughly meters per degree latitude
+      return meters / 111320;
     }
 
     function metersToDegreesLng(meters, latitude) {
