@@ -49,15 +49,17 @@
       const ne = bounds.getNorthEast();
 
       const stepLat = metersToDegreesLat(GRID_SIZE_METERS);
+      const centerLat = (sw.lat + ne.lat) / 2;
+      const stepLng = metersToDegreesLng(GRID_SIZE_METERS, centerLat);
+
       const baseLat = Math.floor(sw.lat / stepLat) * stepLat;
+      const baseLng = Math.floor(sw.lng / stepLng) * stepLng;
+
       const rows = Math.ceil((ne.lat - baseLat) / stepLat);
+      const cols = Math.ceil((ne.lng - baseLng) / stepLng);
 
       for (let i = 0; i < rows; i++) {
         const lat = baseLat + i * stepLat;
-        const stepLng = metersToDegreesLng(GRID_SIZE_METERS, lat);
-        const baseLng = Math.floor(sw.lng / stepLng) * stepLng;
-        const cols = Math.ceil((ne.lng - baseLng) / stepLng);
-
         for (let j = 0; j < cols; j++) {
           const lng = baseLng + j * stepLng;
           drawSquare(lat, lng, stepLat, stepLng);
