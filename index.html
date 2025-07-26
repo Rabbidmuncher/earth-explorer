@@ -7,9 +7,34 @@
   <link rel="stylesheet" href="style.css" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
   <style>
+    body {
+      margin: 0;
+      display: flex;
+    }
+    #sidebar {
+      width: 250px;
+      background: #f4f4f4;
+      border-right: 1px solid #ccc;
+      padding: 10px;
+      box-sizing: border-box;
+      transition: transform 0.3s ease;
+    }
+    #sidebar.collapsed {
+      transform: translateX(-100%);
+    }
+    #sidebar-toggle {
+      position: absolute;
+      left: 250px;
+      top: 10px;
+      background: #007bff;
+      color: white;
+      padding: 5px 10px;
+      border: none;
+      cursor: pointer;
+    }
     #map {
       height: 100vh;
-      width: 100%;
+      flex: 1;
     }
     .grid-square {
       color: #000;
@@ -23,10 +48,24 @@
   </style>
 </head>
 <body>
+  <div id="sidebar">
+    <h3>Menu</h3>
+    <ul>
+      <li><a href="#">Help</a></li>
+      <li><a href="#">User Information</a></li>
+      <li><a href="#">Terms and Conditions</a></li>
+    </ul>
+  </div>
+  <button id="sidebar-toggle">☰</button>
   <div id="map"></div>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
   <script>
+    document.getElementById('sidebar-toggle').addEventListener('click', function () {
+      const sidebar = document.getElementById('sidebar');
+      sidebar.classList.toggle('collapsed');
+    });
+
     const map = L.map('map').setView([56.95, 24.1], 6); // Latvia center
 
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
