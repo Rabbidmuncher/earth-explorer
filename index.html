@@ -125,6 +125,7 @@
     function drawSquare(lat, lng, stepLat, stepLng) {
       const bounds = [[lat, lng], [lat + stepLat, lng + stepLng]];
       const key = `${lat.toFixed(6)},${lng.toFixed(6)}`;
+
       const square = L.rectangle(bounds, {
         className: 'grid-square',
         color: '#000',
@@ -157,6 +158,11 @@
 
         drawGrid();
       });
+
+      // Restore selection from state
+      if (selectedSquares.has(key)) {
+        square.setStyle({ fillColor: 'yellow', fillOpacity: 0.4 });
+      }
 
       gridLayer.addLayer(square);
     }
