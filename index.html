@@ -94,8 +94,9 @@
       return meters / (40075000 * Math.cos(latitude * Math.PI / 180) / 360);
     }
 
-    const stepLat = metersToDegreesLat(GRID_SIZE_METERS);
-    let stepLng = metersToDegreesLng(GRID_SIZE_METERS, map.getCenter().lat);
+    function getStepLng() {
+      return metersToDegreesLng(GRID_SIZE_METERS, map.getCenter().lat);
+    }
 
     function drawGrid() {
       gridLayer.clearLayers();
@@ -106,8 +107,8 @@
       const sw = bounds.getSouthWest();
       const ne = bounds.getNorthEast();
 
-      const centerLat = map.getCenter().lat;
-      stepLng = metersToDegreesLng(GRID_SIZE_METERS, centerLat);
+      const stepLat = metersToDegreesLat(GRID_SIZE_METERS);
+      const stepLng = getStepLng();
 
       const minLat = Math.floor(sw.lat / stepLat) * stepLat;
       const maxLat = Math.ceil(ne.lat / stepLat) * stepLat;
@@ -116,12 +117,12 @@
 
       for (let lat = minLat; lat < maxLat; lat += stepLat) {
         for (let lng = minLng; lng < maxLng; lng += stepLng) {
-          drawSquare(lat, lng);
+          drawSquare(lat, lng, stepLat, stepLng);
         }
       }
     }
 
-    function drawSquare(lat, lng) {
+    function drawSquare(lat, lng, stepLat, stepLng) {
       const bounds = [[lat, lng], [lat + stepLat, lng + stepLng]];
       const key = `${lat.toFixed(6)},${lng.toFixed(6)}`;
       const square = L.rectangle(bounds, {
