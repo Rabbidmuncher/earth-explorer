@@ -74,7 +74,7 @@
       sidebar.classList.toggle('collapsed');
     });
 
-    const map = L.map('map').setView([56.95, 24.1], 6); // Latvia center
+    const map = L.map('map').setView([56.95, 24.1], 6);
 
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '&copy; OpenStreetMap contributors'
@@ -83,7 +83,7 @@
     const gridLayer = L.layerGroup().addTo(map);
     const GRID_SIZE_METERS = 300;
     let lastClickTime = 0;
-    const CLICK_COOLDOWN_MS = 1000; // 1 second
+    const CLICK_COOLDOWN_MS = 1000;
     const selectedSquares = new Map();
 
     function metersToDegreesLat(meters) {
@@ -94,8 +94,16 @@
       return meters / (40075000 * Math.cos(latitude * Math.PI / 180) / 360);
     }
 
-    function getStepLng() {
-      return metersToDegreesLng(GRID_SIZE_METERS, map.getCenter().lat);
+    function getStepSizes() {
+      const stepLat = metersToDegreesLat(GRID_SIZE_METERS);
+      const stepLng = metersToDegreesLng(GRID_SIZE_METERS, 0); // fixed at equator for uniform ID
+      return { stepLat, stepLng };
+    }
+
+    function getGridId(lat, lng, stepLat, stepLng) {
+      const latIndex = Math.floor(lat / stepLat);
+      const lngIndex = Math.floor(lng / stepLng);
+      return `${latIndex}_${lngIndex}`;
     }
 
     function drawGrid() {
@@ -107,8 +115,7 @@
       const sw = bounds.getSouthWest();
       const ne = bounds.getNorthEast();
 
-      const stepLat = metersToDegreesLat(GRID_SIZE_METERS);
-      const stepLng = getStepLng();
+      const { stepLat, stepLng } = getStepSizes();
 
       const minLat = Math.floor(sw.lat / stepLat) * stepLat;
       const maxLat = Math.ceil(ne.lat / stepLat) * stepLat;
@@ -124,14 +131,14 @@
 
     function drawSquare(lat, lng, stepLat, stepLng) {
       const bounds = [[lat, lng], [lat + stepLat, lng + stepLng]];
-      const key = `${lat.toFixed(6)},${lng.toFixed(6)}`;
+      const gridId = getGridId(lat, lng, stepLat, stepLng);
 
       const square = L.rectangle(bounds, {
         className: 'grid-square',
         color: '#000',
         weight: 0.5,
-        fillOpacity: selectedSquares.has(key) ? 0.4 : 0,
-        fillColor: selectedSquares.has(key) ? 'yellow' : undefined
+        fillOpacity: selectedSquares.has(gridId) ? 0.4 : 0,
+        fillColor: selectedSquares.has(gridId) ? 'yellow' : undefined
       });
 
       square.on('click', async function () {
@@ -149,7 +156,7 @@
         }
 
         if (isLand) {
-          selectedSquares.set(key, true);
+          selectedSquares.set(gridId, true);
           square.setStyle({ fillColor: 'yellow', fillOpacity: 0.4 });
           square.bindPopup("This square is unclaimed. You can buy it!").openPopup();
         } else {
@@ -159,8 +166,7 @@
         drawGrid();
       });
 
-      // Restore selection from state
-      if (selectedSquares.has(key)) {
+      if (selectedSquares.has(gridId)) {
         square.setStyle({ fillColor: 'yellow', fillOpacity: 0.4 });
       }
 
