@@ -35,7 +35,7 @@
       padding: 5px 10px;
       border: none;
       cursor: pointer;
-      z-index: 1001;
+      z-index: 1000;
       border-radius: 5px;
     }
     #map {
@@ -62,6 +62,7 @@
       <li><a href="#">User Information</a></li>
       <li><a href="#">Terms and Conditions</a></li>
     </ul>
+    <label><input type="checkbox" id="multi-check" /> Check several</label>
   </div>
   <button id="sidebar-toggle">☰</button>
   <div id="map"></div>
@@ -133,14 +134,15 @@
         const centerLng = lng + stepLng / 2;
         const isLand = await checkIfLand(centerLat, centerLng);
 
-        if (lastClickedSquare) {
+        const multiCheck = document.getElementById('multi-check').checked;
+        if (!multiCheck && lastClickedSquare) {
           lastClickedSquare.setStyle({ fillOpacity: 0 });
         }
 
         if (isLand) {
           square.setStyle({ fillColor: 'yellow', fillOpacity: 0.4 });
           square.bindPopup("This square is unclaimed. You can buy it!").openPopup();
-          lastClickedSquare = square;
+          if (!multiCheck) lastClickedSquare = square;
         } else {
           square.bindPopup("This square is in the ocean and cannot be claimed.").openPopup();
         }
