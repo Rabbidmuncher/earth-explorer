@@ -83,46 +83,51 @@
     const gridLayer = L.layerGroup().addTo(map);
     const GRID_SIZE_METERS = 300;
     let lastClickTime = 0;
-    const CLICK_COOLDOWN_MS = 1000;
-    const selectedSquares = new Set();
+    const CLICK_COOLDOWN_MS = 1000; // 1 second
+    const selectedSquares = new Map();
 
-    const gridAnchor = { lat: 0, lng: 0 }; // fixed origin to keep grid consistent
+    function metersToDegreesLat(meters) {
+      return meters / 111320;
+    }
+
+    function metersToDegreesLng(meters, latitude) {
+      return meters / (40075000 * Math.cos(latitude * Math.PI / 180) / 360);
+    }
+
+    const stepLat = metersToDegreesLat(GRID_SIZE_METERS);
+    const stepLng = metersToDegreesLng(GRID_SIZE_METERS, 0); // base at equator
 
     function drawGrid() {
       gridLayer.clearLayers();
+
       if (map.getZoom() < 12) return;
 
       const bounds = map.getBounds();
       const sw = bounds.getSouthWest();
       const ne = bounds.getNorthEast();
 
-      const stepLat = metersToDegreesLat(GRID_SIZE_METERS);
-      const centerLat = (sw.lat + ne.lat) / 2;
-      const stepLng = metersToDegreesLng(GRID_SIZE_METERS, centerLat);
+      const minLat = Math.floor(sw.lat / stepLat) * stepLat;
+      const maxLat = Math.ceil(ne.lat / stepLat) * stepLat;
+      const minLng = Math.floor(sw.lng / stepLng) * stepLng;
+      const maxLng = Math.ceil(ne.lng / stepLng) * stepLng;
 
-      const startLat = gridAnchor.lat + Math.floor((sw.lat - gridAnchor.lat) / stepLat) * stepLat;
-      const startLng = gridAnchor.lng + Math.floor((sw.lng - gridAnchor.lng) / stepLng) * stepLng;
-
-      for (let lat = startLat; lat < ne.lat; lat += stepLat) {
-        for (let lng = startLng; lng < ne.lng; lng += stepLng) {
-          drawSquare(lat, lng, stepLat, stepLng);
+      for (let lat = minLat; lat < maxLat; lat += stepLat) {
+        for (let lng = minLng; lng < maxLng; lng += stepLng) {
+          drawSquare(lat, lng);
         }
       }
     }
 
-    function drawSquare(lat, lng, stepLat, stepLng) {
+    function drawSquare(lat, lng) {
       const bounds = [[lat, lng], [lat + stepLat, lng + stepLng]];
+      const key = `${lat.toFixed(6)},${lng.toFixed(6)}`;
       const square = L.rectangle(bounds, {
         className: 'grid-square',
         color: '#000',
         weight: 0.5,
-        fillOpacity: 0
+        fillOpacity: selectedSquares.has(key) ? 0.4 : 0,
+        fillColor: selectedSquares.has(key) ? 'yellow' : undefined
       });
-
-      const key = `${lat.toFixed(6)},${lng.toFixed(6)}`;
-      if (selectedSquares.has(key)) {
-        square.setStyle({ fillColor: 'yellow', fillOpacity: 0.4 });
-      }
 
       square.on('click', async function () {
         const now = Date.now();
@@ -136,20 +141,17 @@
         const multiCheck = document.getElementById('multi-check').checked;
         if (!multiCheck) {
           selectedSquares.clear();
-          gridLayer.eachLayer(layer => {
-            if (layer instanceof L.Rectangle) {
-              layer.setStyle({ fillOpacity: 0 });
-            }
-          });
         }
 
         if (isLand) {
+          selectedSquares.set(key, true);
           square.setStyle({ fillColor: 'yellow', fillOpacity: 0.4 });
           square.bindPopup("This square is unclaimed. You can buy it!").openPopup();
-          selectedSquares.add(key);
         } else {
           square.bindPopup("This square is in the ocean and cannot be claimed.").openPopup();
         }
+
+        drawGrid();
       });
 
       gridLayer.addLayer(square);
@@ -166,16 +168,8 @@
       }
     }
 
-    function metersToDegreesLat(meters) {
-      return meters / 111320;
-    }
-
-    function metersToDegreesLng(meters, latitude) {
-      return meters / (40075000 * Math.cos(latitude * Math.PI / 180) / 360);
-    }
-
-    map.on('zoomend', drawGrid); // grid adjusts only when zoom changes
-    map.on('moveend', drawGrid);
+    map.on('moveend zoomend', drawGrid);
+    drawGrid();
   </script>
 </body>
 </html>
