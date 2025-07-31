@@ -82,17 +82,15 @@
 
     const gridLayer = L.layerGroup().addTo(map);
     const GRID_SIZE_METERS = 300;
-    let lastClickedSquare = null;
     let lastClickTime = 0;
-    const CLICK_COOLDOWN_MS = 1000; // 1 second
+    const CLICK_COOLDOWN_MS = 1000;
     const selectedSquares = new Set();
-    const squareCache = new Map();
+
+    const gridAnchor = { lat: 0, lng: 0 }; // fixed origin to keep grid consistent
 
     function drawGrid() {
-      if (map.getZoom() < 12) {
-        gridLayer.clearLayers();
-        return;
-      }
+      gridLayer.clearLayers();
+      if (map.getZoom() < 12) return;
 
       const bounds = map.getBounds();
       const sw = bounds.getSouthWest();
@@ -102,47 +100,29 @@
       const centerLat = (sw.lat + ne.lat) / 2;
       const stepLng = metersToDegreesLng(GRID_SIZE_METERS, centerLat);
 
-      const baseLat = Math.floor(sw.lat / stepLat) * stepLat;
-      const baseLng = Math.floor(sw.lng / stepLng) * stepLng;
+      const startLat = gridAnchor.lat + Math.floor((sw.lat - gridAnchor.lat) / stepLat) * stepLat;
+      const startLng = gridAnchor.lng + Math.floor((sw.lng - gridAnchor.lng) / stepLng) * stepLng;
 
-      const rows = Math.ceil((ne.lat - baseLat) / stepLat);
-      const cols = Math.ceil((ne.lng - baseLng) / stepLng);
-
-      const newCache = new Map();
-
-      for (let i = 0; i < rows; i++) {
-        const lat = baseLat + i * stepLat;
-        for (let j = 0; j < cols; j++) {
-          const lng = baseLng + j * stepLng;
-          const key = `${lat.toFixed(6)},${lng.toFixed(6)}`;
-          let square;
-
-          if (squareCache.has(key)) {
-            square = squareCache.get(key);
-          } else {
-            square = createSquare(lat, lng, stepLat, stepLng, key);
-          }
-
-          newCache.set(key, square);
-          gridLayer.addLayer(square);
+      for (let lat = startLat; lat < ne.lat; lat += stepLat) {
+        for (let lng = startLng; lng < ne.lng; lng += stepLng) {
+          drawSquare(lat, lng, stepLat, stepLng);
         }
-      }
-
-      squareCache.clear();
-      for (const [key, value] of newCache.entries()) {
-        squareCache.set(key, value);
       }
     }
 
-    function createSquare(lat, lng, stepLat, stepLng, key) {
+    function drawSquare(lat, lng, stepLat, stepLng) {
       const bounds = [[lat, lng], [lat + stepLat, lng + stepLng]];
       const square = L.rectangle(bounds, {
         className: 'grid-square',
         color: '#000',
         weight: 0.5,
-        fillOpacity: selectedSquares.has(key) ? 0.4 : 0,
-        fillColor: selectedSquares.has(key) ? 'yellow' : undefined
+        fillOpacity: 0
       });
+
+      const key = `${lat.toFixed(6)},${lng.toFixed(6)}`;
+      if (selectedSquares.has(key)) {
+        square.setStyle({ fillColor: 'yellow', fillOpacity: 0.4 });
+      }
 
       square.on('click', async function () {
         const now = Date.now();
@@ -156,7 +136,11 @@
         const multiCheck = document.getElementById('multi-check').checked;
         if (!multiCheck) {
           selectedSquares.clear();
-          squareCache.forEach(sq => sq.setStyle({ fillOpacity: 0 }));
+          gridLayer.eachLayer(layer => {
+            if (layer instanceof L.Rectangle) {
+              layer.setStyle({ fillOpacity: 0 });
+            }
+          });
         }
 
         if (isLand) {
@@ -168,7 +152,7 @@
         }
       });
 
-      return square;
+      gridLayer.addLayer(square);
     }
 
     async function checkIfLand(lat, lng) {
@@ -190,7 +174,8 @@
       return meters / (40075000 * Math.cos(latitude * Math.PI / 180) / 360);
     }
 
-    map.on('moveend zoomend', drawGrid);
+    map.on('zoomend', drawGrid); // grid adjusts only when zoom changes
+    map.on('moveend', drawGrid);
   </script>
 </body>
 </html>
