@@ -95,7 +95,7 @@
     }
 
     const stepLat = metersToDegreesLat(GRID_SIZE_METERS);
-    const stepLng = metersToDegreesLng(GRID_SIZE_METERS, 0); // base at equator
+    let stepLng = metersToDegreesLng(GRID_SIZE_METERS, map.getCenter().lat);
 
     function drawGrid() {
       gridLayer.clearLayers();
@@ -105,6 +105,9 @@
       const bounds = map.getBounds();
       const sw = bounds.getSouthWest();
       const ne = bounds.getNorthEast();
+
+      const centerLat = map.getCenter().lat;
+      stepLng = metersToDegreesLng(GRID_SIZE_METERS, centerLat);
 
       const minLat = Math.floor(sw.lat / stepLat) * stepLat;
       const maxLat = Math.ceil(ne.lat / stepLat) * stepLat;
