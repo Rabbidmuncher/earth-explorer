@@ -87,10 +87,12 @@
     const CLICK_COOLDOWN_MS = 1000;
     const selectedSquares = new Map();
 
-    function metersToLatLng(meters) {
-      const earthRadius = 6378137;
-      const lat = (meters / earthRadius) * (180 / Math.PI);
-      return lat;
+    function metersToLat(meters) {
+      return meters / 111320;
+    }
+
+    function metersToLng(meters, lat) {
+      return meters / (111320 * Math.cos(lat * Math.PI / 180));
     }
 
     function getGridKey(lat, lng, stepLat, stepLng) {
@@ -101,15 +103,15 @@
 
     function drawGrid() {
       gridLayer.clearLayers();
-
       if (map.getZoom() < 12) return;
 
       const bounds = map.getBounds();
       const sw = bounds.getSouthWest();
       const ne = bounds.getNorthEast();
 
-      const stepLat = metersToLatLng(GRID_SIZE_METERS);
-      const stepLng = metersToLatLng(GRID_SIZE_METERS); // same for equal sides
+      const centerLat = map.getCenter().lat;
+      const stepLat = metersToLat(GRID_SIZE_METERS);
+      const stepLng = metersToLng(GRID_SIZE_METERS, centerLat);
 
       const minLat = Math.floor(sw.lat / stepLat) * stepLat;
       const maxLat = Math.ceil(ne.lat / stepLat) * stepLat;
