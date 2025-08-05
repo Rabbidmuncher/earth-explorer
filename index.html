@@ -44,8 +44,9 @@
       z-index: 0;
     }
     .grid-square {
-      color: #000;
-      weight: 1;
+      color: lightgray;
+      weight: 0.4;
+      dashArray: 2;
       fillOpacity: 0;
     }
     .grid-square.clicked {
@@ -86,12 +87,10 @@
     const CLICK_COOLDOWN_MS = 1000;
     const selectedSquares = new Map();
 
-    function metersToLat(m) {
-      return m / 111320;
-    }
-
-    function metersToLng(m, lat) {
-      return m / (40075000 * Math.cos(lat * Math.PI / 180) / 360);
+    function metersToLatLng(meters) {
+      const earthRadius = 6378137;
+      const lat = (meters / earthRadius) * (180 / Math.PI);
+      return lat;
     }
 
     function getGridKey(lat, lng, stepLat, stepLng) {
@@ -109,8 +108,8 @@
       const sw = bounds.getSouthWest();
       const ne = bounds.getNorthEast();
 
-      const stepLat = metersToLat(GRID_SIZE_METERS);
-      const stepLng = metersToLng(GRID_SIZE_METERS, 0); // fixed for stable grid
+      const stepLat = metersToLatLng(GRID_SIZE_METERS);
+      const stepLng = metersToLatLng(GRID_SIZE_METERS); // same for equal sides
 
       const minLat = Math.floor(sw.lat / stepLat) * stepLat;
       const maxLat = Math.ceil(ne.lat / stepLat) * stepLat;
@@ -123,8 +122,10 @@
           const key = getGridKey(lat, lng, stepLat, stepLng);
 
           const square = L.rectangle(bounds, {
-            color: '#000',
-            weight: 0.5,
+            className: 'grid-square',
+            color: 'lightgray',
+            weight: 0.4,
+            dashArray: '2',
             fillOpacity: selectedSquares.has(key) ? 0.4 : 0,
             fillColor: selectedSquares.has(key) ? 'yellow' : undefined
           });
