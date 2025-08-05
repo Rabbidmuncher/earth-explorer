@@ -78,6 +78,41 @@
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '&copy; OpenStreetMap contributors'
     }).addTo(map);
+
+    const gridLayer = L.layerGroup().addTo(map);
+    const GRID_STEP_DEG = 0.0045; // ~500 meters at equator
+
+    function drawGrid() {
+      gridLayer.clearLayers();
+      if (map.getZoom() < 12) return;
+
+      const bounds = map.getBounds();
+      const sw = bounds.getSouthWest();
+      const ne = bounds.getNorthEast();
+
+      const minLat = Math.floor(sw.lat / GRID_STEP_DEG) * GRID_STEP_DEG;
+      const maxLat = Math.ceil(ne.lat / GRID_STEP_DEG) * GRID_STEP_DEG;
+      const minLng = Math.floor(sw.lng / GRID_STEP_DEG) * GRID_STEP_DEG;
+      const maxLng = Math.ceil(ne.lng / GRID_STEP_DEG) * GRID_STEP_DEG;
+
+      for (let lat = minLat; lat < maxLat; lat += GRID_STEP_DEG) {
+        for (let lng = minLng; lng < maxLng; lng += GRID_STEP_DEG) {
+          const square = L.rectangle(
+            [[lat, lng], [lat + GRID_STEP_DEG, lng + GRID_STEP_DEG]],
+            {
+              color: 'lightgray',
+              weight: 0.5,
+              dashArray: '2',
+              fillOpacity: 0
+            }
+          );
+          gridLayer.addLayer(square);
+        }
+      }
+    }
+
+    map.on('moveend zoomend', drawGrid);
+    drawGrid();
   </script>
 </body>
 </html>
