@@ -82,18 +82,10 @@
     }).addTo(map);
 
     const gridLayer = L.layerGroup().addTo(map);
-    const GRID_SIZE_METERS = 300;
+    const GRID_STEP = 0.0025; // fixed lat/lng grid size (approx 277m x 277m at equator)
     let lastClickTime = 0;
     const CLICK_COOLDOWN_MS = 1000;
     const selectedSquares = new Map();
-
-    function metersToLat(meters) {
-      return meters / 111320;
-    }
-
-    function metersToLng(meters, lat) {
-      return meters / (111320 * Math.cos(lat * Math.PI / 180));
-    }
 
     function getGridKey(latIndex, lngIndex) {
       return `${latIndex}_${lngIndex}`;
@@ -106,20 +98,17 @@
       const bounds = map.getBounds();
       const sw = bounds.getSouthWest();
       const ne = bounds.getNorthEast();
-      const centerLat = map.getCenter().lat;
-      const stepLat = metersToLat(GRID_SIZE_METERS);
-      const stepLng = metersToLng(GRID_SIZE_METERS, centerLat);
 
-      const minLatIndex = Math.floor(sw.lat / stepLat);
-      const maxLatIndex = Math.ceil(ne.lat / stepLat);
-      const minLngIndex = Math.floor(sw.lng / stepLng);
-      const maxLngIndex = Math.ceil(ne.lng / stepLng);
+      const minLatIndex = Math.floor(sw.lat / GRID_STEP);
+      const maxLatIndex = Math.ceil(ne.lat / GRID_STEP);
+      const minLngIndex = Math.floor(sw.lng / GRID_STEP);
+      const maxLngIndex = Math.ceil(ne.lng / GRID_STEP);
 
       for (let latIndex = minLatIndex; latIndex < maxLatIndex; latIndex++) {
         for (let lngIndex = minLngIndex; lngIndex < maxLngIndex; lngIndex++) {
-          const lat = latIndex * stepLat;
-          const lng = lngIndex * stepLng;
-          const bounds = [[lat, lng], [lat + stepLat, lng + stepLng]];
+          const lat = latIndex * GRID_STEP;
+          const lng = lngIndex * GRID_STEP;
+          const bounds = [[lat, lng], [lat + GRID_STEP, lng + GRID_STEP]];
           const key = getGridKey(latIndex, lngIndex);
 
           const square = L.rectangle(bounds, {
@@ -136,8 +125,8 @@
             if (now - lastClickTime < CLICK_COOLDOWN_MS) return;
             lastClickTime = now;
 
-            const centerLat = lat + stepLat / 2;
-            const centerLng = lng + stepLng / 2;
+            const centerLat = lat + GRID_STEP / 2;
+            const centerLng = lng + GRID_STEP / 2;
             const isLand = await checkIfLand(centerLat, centerLng);
 
             const multiCheck = document.getElementById('multi-check').checked;
