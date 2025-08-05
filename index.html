@@ -64,9 +64,15 @@
       sidebar.classList.toggle('collapsed');
     });
 
+    const southWest = L.latLng(-85, -180);
+    const northEast = L.latLng(85, 180);
+    const bounds = L.latLngBounds(southWest, northEast);
+
     const map = L.map('map', {
       minZoom: 4,
-      maxZoom: 19
+      maxZoom: 19,
+      maxBounds: bounds,
+      maxBoundsViscosity: 1.0
     }).setView([56.95, 24.1], 6);
 
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
