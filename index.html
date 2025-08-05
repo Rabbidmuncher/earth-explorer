@@ -64,7 +64,10 @@
       sidebar.classList.toggle('collapsed');
     });
 
-    const map = L.map('map').setView([56.95, 24.1], 6);
+    const map = L.map('map', {
+      minZoom: 4,
+      maxZoom: 19
+    }).setView([56.95, 24.1], 6);
 
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '&copy; OpenStreetMap contributors'
