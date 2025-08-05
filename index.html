@@ -43,16 +43,6 @@
       width: 100vw;
       z-index: 0;
     }
-    .grid-square {
-      color: lightgray;
-      weight: 0.4;
-      dashArray: 2;
-      fillOpacity: 0;
-    }
-    .grid-square.clicked {
-      fillColor: yellow;
-      fillOpacity: 0.4;
-    }
   </style>
 </head>
 <body>
@@ -63,7 +53,6 @@
       <li><a href="#">User Information</a></li>
       <li><a href="#">Terms and Conditions</a></li>
     </ul>
-    <label><input type="checkbox" id="multi-check" /> Check several</label>
   </div>
   <button id="sidebar-toggle">☰</button>
   <div id="map"></div>
@@ -80,88 +69,6 @@
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '&copy; OpenStreetMap contributors'
     }).addTo(map);
-
-    const gridLayer = L.layerGroup().addTo(map);
-    const GRID_STEP = 0.0025;
-    const CLICK_COOLDOWN_MS = 1000;
-    let lastClickTime = 0;
-    const selectedSquares = new Map();
-
-    function getGridKey(latIndex, lngIndex) {
-      return `${latIndex}_${lngIndex}`;
-    }
-
-    function drawVisibleGrid() {
-      gridLayer.clearLayers();
-
-      const bounds = map.getBounds();
-      const sw = bounds.getSouthWest();
-      const ne = bounds.getNorthEast();
-
-      const minLatIndex = Math.floor(sw.lat / GRID_STEP);
-      const maxLatIndex = Math.ceil(ne.lat / GRID_STEP);
-      const minLngIndex = Math.floor(sw.lng / GRID_STEP);
-      const maxLngIndex = Math.ceil(ne.lng / GRID_STEP);
-
-      for (let latIndex = minLatIndex; latIndex <= maxLatIndex; latIndex++) {
-        for (let lngIndex = minLngIndex; lngIndex <= maxLngIndex; lngIndex++) {
-          const lat = latIndex * GRID_STEP;
-          const lng = lngIndex * GRID_STEP;
-          const bounds = [[lat, lng], [lat + GRID_STEP, lng + GRID_STEP]];
-          const key = getGridKey(latIndex, lngIndex);
-
-          const square = L.rectangle(bounds, {
-            className: 'grid-square',
-            color: 'lightgray',
-            weight: 0.4,
-            dashArray: '2',
-            fillOpacity: selectedSquares.has(key) ? 0.4 : 0,
-            fillColor: selectedSquares.has(key) ? 'yellow' : undefined
-          });
-
-          square.on('click', async function () {
-            const now = Date.now();
-            if (now - lastClickTime < CLICK_COOLDOWN_MS) return;
-            lastClickTime = now;
-
-            const centerLat = lat + GRID_STEP / 2;
-            const centerLng = lng + GRID_STEP / 2;
-            const isLand = await checkIfLand(centerLat, centerLng);
-
-            const multiCheck = document.getElementById('multi-check').checked;
-            if (!multiCheck) {
-              selectedSquares.clear();
-            }
-
-            if (isLand) {
-              selectedSquares.set(key, true);
-              square.setStyle({ fillColor: 'yellow', fillOpacity: 0.4 });
-              square.bindPopup("This square is unclaimed. You can buy it!").openPopup();
-            } else {
-              square.bindPopup("This square is in the ocean and cannot be claimed.").openPopup();
-            }
-
-            drawVisibleGrid();
-          });
-
-          gridLayer.addLayer(square);
-        }
-      }
-    }
-
-    async function checkIfLand(lat, lng) {
-      try {
-        const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`);
-        const data = await response.json();
-        return data.address && data.address.country;
-      } catch (err) {
-        console.error('Land check failed:', err);
-        return false;
-      }
-    }
-
-    map.on('moveend zoomend', drawVisibleGrid);
-    drawVisibleGrid();
   </script>
 </body>
 </html>
