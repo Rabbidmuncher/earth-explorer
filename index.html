@@ -86,21 +86,15 @@
     const CLICK_COOLDOWN_MS = 1000;
     const selectedSquares = new Map();
 
-    function metersToDegreesLat(meters) {
-      return meters / 111320;
+    function metersToLat(m) {
+      return m / 111320;
     }
 
-    function metersToDegreesLng(meters, latitude) {
-      return meters / (40075000 * Math.cos(latitude * Math.PI / 180) / 360);
+    function metersToLng(m, lat) {
+      return m / (40075000 * Math.cos(lat * Math.PI / 180) / 360);
     }
 
-    function getStepSizes() {
-      const stepLat = metersToDegreesLat(GRID_SIZE_METERS);
-      const stepLng = metersToDegreesLng(GRID_SIZE_METERS, 0); // fixed at equator for uniform ID
-      return { stepLat, stepLng };
-    }
-
-    function getGridId(lat, lng, stepLat, stepLng) {
+    function getGridKey(lat, lng, stepLat, stepLng) {
       const latIndex = Math.floor(lat / stepLat);
       const lngIndex = Math.floor(lng / stepLng);
       return `${latIndex}_${lngIndex}`;
@@ -115,7 +109,8 @@
       const sw = bounds.getSouthWest();
       const ne = bounds.getNorthEast();
 
-      const { stepLat, stepLng } = getStepSizes();
+      const stepLat = metersToLat(GRID_SIZE_METERS);
+      const stepLng = metersToLng(GRID_SIZE_METERS, 0); // fixed for stable grid
 
       const minLat = Math.floor(sw.lat / stepLat) * stepLat;
       const maxLat = Math.ceil(ne.lat / stepLat) * stepLat;
@@ -124,53 +119,48 @@
 
       for (let lat = minLat; lat < maxLat; lat += stepLat) {
         for (let lng = minLng; lng < maxLng; lng += stepLng) {
-          drawSquare(lat, lng, stepLat, stepLng);
+          const bounds = [[lat, lng], [lat + stepLat, lng + stepLng]];
+          const key = getGridKey(lat, lng, stepLat, stepLng);
+
+          const square = L.rectangle(bounds, {
+            color: '#000',
+            weight: 0.5,
+            fillOpacity: selectedSquares.has(key) ? 0.4 : 0,
+            fillColor: selectedSquares.has(key) ? 'yellow' : undefined
+          });
+
+          square.on('click', async function () {
+            const now = Date.now();
+            if (now - lastClickTime < CLICK_COOLDOWN_MS) return;
+            lastClickTime = now;
+
+            const centerLat = lat + stepLat / 2;
+            const centerLng = lng + stepLng / 2;
+            const isLand = await checkIfLand(centerLat, centerLng);
+
+            const multiCheck = document.getElementById('multi-check').checked;
+            if (!multiCheck) {
+              selectedSquares.clear();
+            }
+
+            if (isLand) {
+              selectedSquares.set(key, true);
+              square.setStyle({ fillColor: 'yellow', fillOpacity: 0.4 });
+              square.bindPopup("This square is unclaimed. You can buy it!").openPopup();
+            } else {
+              square.bindPopup("This square is in the ocean and cannot be claimed.").openPopup();
+            }
+
+            drawGrid();
+          });
+
+          if (selectedSquares.has(key)) {
+            square.setStyle({ fillColor: 'yellow', fillOpacity: 0.4 });
+          }
+
+          gridLayer.addLayer(square);
         }
       }
-    }
-
-    function drawSquare(lat, lng, stepLat, stepLng) {
-      const bounds = [[lat, lng], [lat + stepLat, lng + stepLng]];
-      const gridId = getGridId(lat, lng, stepLat, stepLng);
-
-      const square = L.rectangle(bounds, {
-        className: 'grid-square',
-        color: '#000',
-        weight: 0.5,
-        fillOpacity: selectedSquares.has(gridId) ? 0.4 : 0,
-        fillColor: selectedSquares.has(gridId) ? 'yellow' : undefined
-      });
-
-      square.on('click', async function () {
-        const now = Date.now();
-        if (now - lastClickTime < CLICK_COOLDOWN_MS) return;
-        lastClickTime = now;
-
-        const centerLat = lat + stepLat / 2;
-        const centerLng = lng + stepLng / 2;
-        const isLand = await checkIfLand(centerLat, centerLng);
-
-        const multiCheck = document.getElementById('multi-check').checked;
-        if (!multiCheck) {
-          selectedSquares.clear();
-        }
-
-        if (isLand) {
-          selectedSquares.set(gridId, true);
-          square.setStyle({ fillColor: 'yellow', fillOpacity: 0.4 });
-          square.bindPopup("This square is unclaimed. You can buy it!").openPopup();
-        } else {
-          square.bindPopup("This square is in the ocean and cannot be claimed.").openPopup();
-        }
-
-        drawGrid();
-      });
-
-      if (selectedSquares.has(gridId)) {
-        square.setStyle({ fillColor: 'yellow', fillOpacity: 0.4 });
-      }
-
-      gridLayer.addLayer(square);
     }
 
     async function checkIfLand(lat, lng) {
