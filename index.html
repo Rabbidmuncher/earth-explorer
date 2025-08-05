@@ -95,9 +95,7 @@
       return meters / (111320 * Math.cos(lat * Math.PI / 180));
     }
 
-    function getGridKey(lat, lng, stepLat, stepLng) {
-      const latIndex = Math.floor(lat / stepLat);
-      const lngIndex = Math.floor(lng / stepLng);
+    function getGridKey(latIndex, lngIndex) {
       return `${latIndex}_${lngIndex}`;
     }
 
@@ -108,20 +106,21 @@
       const bounds = map.getBounds();
       const sw = bounds.getSouthWest();
       const ne = bounds.getNorthEast();
-
       const centerLat = map.getCenter().lat;
       const stepLat = metersToLat(GRID_SIZE_METERS);
       const stepLng = metersToLng(GRID_SIZE_METERS, centerLat);
 
-      const minLat = Math.floor(sw.lat / stepLat) * stepLat;
-      const maxLat = Math.ceil(ne.lat / stepLat) * stepLat;
-      const minLng = Math.floor(sw.lng / stepLng) * stepLng;
-      const maxLng = Math.ceil(ne.lng / stepLng) * stepLng;
+      const minLatIndex = Math.floor(sw.lat / stepLat);
+      const maxLatIndex = Math.ceil(ne.lat / stepLat);
+      const minLngIndex = Math.floor(sw.lng / stepLng);
+      const maxLngIndex = Math.ceil(ne.lng / stepLng);
 
-      for (let lat = minLat; lat < maxLat; lat += stepLat) {
-        for (let lng = minLng; lng < maxLng; lng += stepLng) {
+      for (let latIndex = minLatIndex; latIndex < maxLatIndex; latIndex++) {
+        for (let lngIndex = minLngIndex; lngIndex < maxLngIndex; lngIndex++) {
+          const lat = latIndex * stepLat;
+          const lng = lngIndex * stepLng;
           const bounds = [[lat, lng], [lat + stepLat, lng + stepLng]];
-          const key = getGridKey(lat, lng, stepLat, stepLng);
+          const key = getGridKey(latIndex, lngIndex);
 
           const square = L.rectangle(bounds, {
             className: 'grid-square',
