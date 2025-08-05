@@ -82,30 +82,24 @@
     }).addTo(map);
 
     const gridLayer = L.layerGroup().addTo(map);
-    const GRID_STEP = 0.0025; // fixed lat/lng grid size (approx 277m x 277m at equator)
-    let lastClickTime = 0;
+    const GRID_STEP = 0.0025;
     const CLICK_COOLDOWN_MS = 1000;
+    let lastClickTime = 0;
     const selectedSquares = new Map();
+    const allSquares = new Map();
 
     function getGridKey(latIndex, lngIndex) {
       return `${latIndex}_${lngIndex}`;
     }
 
-    function drawGrid() {
-      gridLayer.clearLayers();
-      if (map.getZoom() < 12) return;
+    function createStaticGrid() {
+      const minLat = -85;
+      const maxLat = 85;
+      const minLng = -180;
+      const maxLng = 180;
 
-      const bounds = map.getBounds();
-      const sw = bounds.getSouthWest();
-      const ne = bounds.getNorthEast();
-
-      const minLatIndex = Math.floor(sw.lat / GRID_STEP);
-      const maxLatIndex = Math.ceil(ne.lat / GRID_STEP);
-      const minLngIndex = Math.floor(sw.lng / GRID_STEP);
-      const maxLngIndex = Math.ceil(ne.lng / GRID_STEP);
-
-      for (let latIndex = minLatIndex; latIndex < maxLatIndex; latIndex++) {
-        for (let lngIndex = minLngIndex; lngIndex < maxLngIndex; lngIndex++) {
+      for (let latIndex = Math.floor(minLat / GRID_STEP); latIndex < Math.ceil(maxLat / GRID_STEP); latIndex++) {
+        for (let lngIndex = Math.floor(minLng / GRID_STEP); lngIndex < Math.ceil(maxLng / GRID_STEP); lngIndex++) {
           const lat = latIndex * GRID_STEP;
           const lng = lngIndex * GRID_STEP;
           const bounds = [[lat, lng], [lat + GRID_STEP, lng + GRID_STEP]];
@@ -116,8 +110,7 @@
             color: 'lightgray',
             weight: 0.4,
             dashArray: '2',
-            fillOpacity: selectedSquares.has(key) ? 0.4 : 0,
-            fillColor: selectedSquares.has(key) ? 'yellow' : undefined
+            fillOpacity: 0,
           });
 
           square.on('click', async function () {
@@ -132,6 +125,7 @@
             const multiCheck = document.getElementById('multi-check').checked;
             if (!multiCheck) {
               selectedSquares.clear();
+              allSquares.forEach(sq => sq.setStyle({ fillOpacity: 0 }));
             }
 
             if (isLand) {
@@ -141,14 +135,9 @@
             } else {
               square.bindPopup("This square is in the ocean and cannot be claimed.").openPopup();
             }
-
-            drawGrid();
           });
 
-          if (selectedSquares.has(key)) {
-            square.setStyle({ fillColor: 'yellow', fillOpacity: 0.4 });
-          }
-
+          allSquares.set(key, square);
           gridLayer.addLayer(square);
         }
       }
@@ -165,8 +154,7 @@
       }
     }
 
-    map.on('moveend zoomend', drawGrid);
-    drawGrid();
+    createStaticGrid();
   </script>
 </body>
 </html>
