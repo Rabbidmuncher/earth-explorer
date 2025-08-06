@@ -85,7 +85,8 @@
     const ORIGIN_LNG = -180;
     const FIXED_LAT = 56.95; // Fixed latitude for consistent grid spacing
 
-    let selectedSquare = null;
+    let selectedSquareId = null;
+    const selectedSquareLayer = L.layerGroup().addTo(map);
 
     function drawGrid() {
       gridLayer.clearLayers();
@@ -106,6 +107,8 @@
         for (let lngIdx = minLngIndex; lngIdx < maxLngIndex; lngIdx++) {
           const lat = ORIGIN_LAT + latIdx * LAT_STEP;
           const lng = ORIGIN_LNG + lngIdx * lngStep;
+          const squareId = `${latIdx}_${lngIdx}`;
+
           const square = L.rectangle(
             [[lat, lng], [lat + LAT_STEP, lng + lngStep]],
             {
@@ -117,12 +120,19 @@
           );
 
           square.on('click', () => {
-            if (selectedSquare) {
-              selectedSquare.setStyle({ fillOpacity: 0 });
-            }
-            selectedSquare = square;
-            square.setStyle({ fillColor: 'yellow', fillOpacity: 0.4 });
-            square.bindPopup('This square is unclaimed. You can buy it!').openPopup();
+            selectedSquareLayer.clearLayers();
+            const selected = L.rectangle(
+              [[lat, lng], [lat + LAT_STEP, lng + lngStep]],
+              {
+                color: 'yellow',
+                weight: 0.5,
+                fillColor: 'yellow',
+                fillOpacity: 0.4
+              }
+            );
+            selected.bindPopup('This square is unclaimed. You can buy it!').openPopup();
+            selectedSquareLayer.addLayer(selected);
+            selectedSquareId = squareId;
           });
 
           gridLayer.addLayer(square);
