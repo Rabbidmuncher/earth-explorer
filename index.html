@@ -39,16 +39,35 @@
       border-radius: 5px;
     }
     #message-box {
-      position: absolute;
-      top: 20px;
-      right: 20px;
-      background: #ffc107;
-      padding: 10px 15px;
-      border-radius: 5px;
-      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-      font-family: sans-serif;
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: #fff3cd;
+      color: #856404;
+      padding: 20px;
+      border: 1px solid #ffeeba;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
       display: none;
       z-index: 1002;
+      text-align: center;
+      font-family: sans-serif;
+    }
+    #message-box button {
+      margin: 10px 5px 0;
+      padding: 6px 12px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    #buy-btn {
+      background-color: #28a745;
+      color: white;
+    }
+    #cancel-btn {
+      background-color: #dc3545;
+      color: white;
     }
     #map {
       height: 100vh;
@@ -68,7 +87,11 @@
   </div>
   <button id="sidebar-toggle">☰</button>
   <div id="map"></div>
-  <div id="message-box">This square is unclaimed. You can buy it!</div>
+  <div id="message-box">
+    <p>This square is unclaimed. You can buy it!</p>
+    <button id="buy-btn">Buy now</button>
+    <button id="cancel-btn">Cancel</button>
+  </div>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
   <script>
@@ -101,14 +124,24 @@
     let selectedSquareId = null;
     const selectedSquareLayer = L.layerGroup().addTo(map);
 
-    function showMessage(msg) {
+    function showMessage() {
       const box = document.getElementById('message-box');
-      box.innerText = msg;
       box.style.display = 'block';
-      setTimeout(() => {
-        box.style.display = 'none';
-      }, 3000);
     }
+
+    function hideMessage() {
+      const box = document.getElementById('message-box');
+      box.style.display = 'none';
+    }
+
+    document.getElementById('buy-btn').addEventListener('click', function () {
+      alert('Buy functionality is not implemented yet.');
+      hideMessage();
+    });
+
+    document.getElementById('cancel-btn').addEventListener('click', function () {
+      hideMessage();
+    });
 
     function drawGrid() {
       gridLayer.clearLayers();
@@ -154,7 +187,7 @@
             );
             selectedSquareLayer.addLayer(selected);
             selectedSquareId = squareId;
-            showMessage('This square is unclaimed. You can buy it!');
+            showMessage();
           });
 
           gridLayer.addLayer(square);
