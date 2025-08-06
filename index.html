@@ -80,7 +80,7 @@
     }).addTo(map);
 
     const gridLayer = L.layerGroup().addTo(map);
-    const GRID_STEP_DEG = 0.0045; // ~500 meters at equator
+    const LAT_STEP = 0.0045; // ~500 meters north-south
 
     function drawGrid() {
       gridLayer.clearLayers();
@@ -90,15 +90,18 @@
       const sw = bounds.getSouthWest();
       const ne = bounds.getNorthEast();
 
-      const minLat = Math.floor(sw.lat / GRID_STEP_DEG) * GRID_STEP_DEG;
-      const maxLat = Math.ceil(ne.lat / GRID_STEP_DEG) * GRID_STEP_DEG;
-      const minLng = Math.floor(sw.lng / GRID_STEP_DEG) * GRID_STEP_DEG;
-      const maxLng = Math.ceil(ne.lng / GRID_STEP_DEG) * GRID_STEP_DEG;
+      const centerLat = map.getCenter().lat;
+      const lngStep = LAT_STEP / Math.cos(centerLat * Math.PI / 180);
 
-      for (let lat = minLat; lat < maxLat; lat += GRID_STEP_DEG) {
-        for (let lng = minLng; lng < maxLng; lng += GRID_STEP_DEG) {
+      const minLat = Math.floor(sw.lat / LAT_STEP) * LAT_STEP;
+      const maxLat = Math.ceil(ne.lat / LAT_STEP) * LAT_STEP;
+      const minLng = Math.floor(sw.lng / lngStep) * lngStep;
+      const maxLng = Math.ceil(ne.lng / lngStep) * lngStep;
+
+      for (let lat = minLat; lat < maxLat; lat += LAT_STEP) {
+        for (let lng = minLng; lng < maxLng; lng += lngStep) {
           const square = L.rectangle(
-            [[lat, lng], [lat + GRID_STEP_DEG, lng + GRID_STEP_DEG]],
+            [[lat, lng], [lat + LAT_STEP, lng + lngStep]],
             {
               color: 'lightgray',
               weight: 0.5,
