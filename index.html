@@ -65,7 +65,7 @@
       background-color: #28a745;
       color: white;
     }
-    #cancel-btn {
+    #cancel-btn, #ok-btn {
       background-color: #dc3545;
       color: white;
     }
@@ -88,9 +88,11 @@
   <button id="sidebar-toggle">☰</button>
   <div id="map"></div>
   <div id="message-box">
-    <p>This square is unclaimed. You can buy it!</p>
-    <button id="buy-btn">Buy now</button>
-    <button id="cancel-btn">Cancel</button>
+    <p id="message-text">This square is unclaimed. You can buy it!</p>
+    <div id="message-actions">
+      <button id="buy-btn">Buy now</button>
+      <button id="cancel-btn">Cancel</button>
+    </div>
   </div>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
@@ -124,8 +126,37 @@
     let selectedSquareId = null;
     const selectedSquareLayer = L.layerGroup().addTo(map);
 
-    function showMessage() {
+    function showMessage(text, showBuy = true) {
       const box = document.getElementById('message-box');
+      const msg = document.getElementById('message-text');
+      const actions = document.getElementById('message-actions');
+      msg.innerText = text;
+      actions.innerHTML = '';
+
+      if (showBuy) {
+        const buyBtn = document.createElement('button');
+        buyBtn.id = 'buy-btn';
+        buyBtn.innerText = 'Buy now';
+        buyBtn.onclick = () => {
+          alert('Buy functionality is not implemented yet.');
+          hideMessage();
+        };
+
+        const cancelBtn = document.createElement('button');
+        cancelBtn.id = 'cancel-btn';
+        cancelBtn.innerText = 'Cancel';
+        cancelBtn.onclick = hideMessage;
+
+        actions.appendChild(buyBtn);
+        actions.appendChild(cancelBtn);
+      } else {
+        const okBtn = document.createElement('button');
+        okBtn.id = 'ok-btn';
+        okBtn.innerText = 'OK';
+        okBtn.onclick = hideMessage;
+        actions.appendChild(okBtn);
+      }
+
       box.style.display = 'block';
     }
 
@@ -134,14 +165,17 @@
       box.style.display = 'none';
     }
 
-    document.getElementById('buy-btn').addEventListener('click', function () {
-      alert('Buy functionality is not implemented yet.');
-      hideMessage();
-    });
-
-    document.getElementById('cancel-btn').addEventListener('click', function () {
-      hideMessage();
-    });
+    async function isLand(lat, lng) {
+      try {
+        const response = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`, {
+          headers: { 'Accept-Language': 'en' }
+        });
+        const data = await response.json();
+        return !!data.address && !data.error;
+      } catch (e) {
+        return false;
+      }
+    }
 
     function drawGrid() {
       gridLayer.clearLayers();
@@ -174,7 +208,7 @@
             }
           );
 
-          square.on('click', () => {
+          square.on('click', async () => {
             selectedSquareLayer.clearLayers();
             const selected = L.rectangle(
               [[lat, lng], [lat + LAT_STEP, lng + lngStep]],
@@ -187,7 +221,13 @@
             );
             selectedSquareLayer.addLayer(selected);
             selectedSquareId = squareId;
-            showMessage();
+
+            const land = await isLand(lat + LAT_STEP / 2, lng + lngStep / 2);
+            if (land) {
+              showMessage('This square is unclaimed. You can buy it!', true);
+            } else {
+              showMessage('This square cannot be claimed.', false);
+            }
           });
 
           gridLayer.addLayer(square);
