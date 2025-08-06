@@ -83,6 +83,7 @@
     const LAT_STEP = 0.0045; // ~500 meters north-south
     const ORIGIN_LAT = -85;
     const ORIGIN_LNG = -180;
+    const FIXED_LAT = 56.95; // Fixed latitude for consistent grid spacing
 
     function drawGrid() {
       gridLayer.clearLayers();
@@ -92,8 +93,7 @@
       const sw = bounds.getSouthWest();
       const ne = bounds.getNorthEast();
 
-      const centerLat = map.getCenter().lat;
-      const lngStep = LAT_STEP / Math.cos(centerLat * Math.PI / 180);
+      const lngStep = LAT_STEP / Math.cos(FIXED_LAT * Math.PI / 180);
 
       const minLatIndex = Math.floor((sw.lat - ORIGIN_LAT) / LAT_STEP);
       const maxLatIndex = Math.ceil((ne.lat - ORIGIN_LAT) / LAT_STEP);
