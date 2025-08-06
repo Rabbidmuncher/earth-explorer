@@ -38,6 +38,18 @@
       z-index: 1001;
       border-radius: 5px;
     }
+    #message-box {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      background: #ffc107;
+      padding: 10px 15px;
+      border-radius: 5px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+      font-family: sans-serif;
+      display: none;
+      z-index: 1002;
+    }
     #map {
       height: 100vh;
       width: 100vw;
@@ -56,6 +68,7 @@
   </div>
   <button id="sidebar-toggle">☰</button>
   <div id="map"></div>
+  <div id="message-box">This square is unclaimed. You can buy it!</div>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
   <script>
@@ -80,13 +93,22 @@
     }).addTo(map);
 
     const gridLayer = L.layerGroup().addTo(map);
-    const LAT_STEP = 0.0045; // ~500 meters north-south
+    const LAT_STEP = 0.0045;
     const ORIGIN_LAT = -85;
     const ORIGIN_LNG = -180;
-    const FIXED_LAT = 56.95; // Fixed latitude for consistent grid spacing
+    const FIXED_LAT = 56.95;
 
     let selectedSquareId = null;
     const selectedSquareLayer = L.layerGroup().addTo(map);
+
+    function showMessage(msg) {
+      const box = document.getElementById('message-box');
+      box.innerText = msg;
+      box.style.display = 'block';
+      setTimeout(() => {
+        box.style.display = 'none';
+      }, 3000);
+    }
 
     function drawGrid() {
       gridLayer.clearLayers();
@@ -130,9 +152,9 @@
                 fillOpacity: 0.4
               }
             );
-            selected.bindPopup('This square is unclaimed. You can buy it!').openPopup();
             selectedSquareLayer.addLayer(selected);
             selectedSquareId = squareId;
+            showMessage('This square is unclaimed. You can buy it!');
           });
 
           gridLayer.addLayer(square);
