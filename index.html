@@ -85,6 +85,8 @@
     const ORIGIN_LNG = -180;
     const FIXED_LAT = 56.95; // Fixed latitude for consistent grid spacing
 
+    let selectedSquare = null;
+
     function drawGrid() {
       gridLayer.clearLayers();
       if (map.getZoom() < 12) return;
@@ -113,6 +115,16 @@
               fillOpacity: 0
             }
           );
+
+          square.on('click', () => {
+            if (selectedSquare) {
+              selectedSquare.setStyle({ fillOpacity: 0 });
+            }
+            selectedSquare = square;
+            square.setStyle({ fillColor: 'yellow', fillOpacity: 0.4 });
+            square.bindPopup('This square is unclaimed. You can buy it!').openPopup();
+          });
+
           gridLayer.addLayer(square);
         }
       }
