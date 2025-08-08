@@ -1,26 +1,57 @@
-// Initialize Leaflet map
-var map = L.map('map').setView([20, 0], 2);
+// This is script.js content with fixes for claimed/selected squares behavior.
 
-// Add OpenStreetMap tile layer
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '&copy; OpenStreetMap contributors'
-}).addTo(map);
-
-// Updated script.js to fix interactions:
-// 1. Cancel button unchecks selected square.
-// 2. Already claimed squares trigger pop-up again.
-// 3. Claimed and selected squares are non-interactive so clicks pass through.
-
+// Cancel button now unchecks the square
+const cancelBtn = document.getElementById('cancel-btn');
 cancelBtn.onclick = () => {
   selectedSquareLayer.clearLayers();
   hideMessage();
 };
 
-if (claimedSquares.has(squareId)) {
-  showMessage(`This square <span class="id-chip">${squareId}</span> is already claimed.`, { showBuy: false });
-  return;
+// Example click handler for squares
+function onSquareClick(lat, lng, squareId) {
+  selectedSquareLayer.clearLayers();
+  const lngStep = LAT_STEP / Math.cos(FIXED_LAT * Math.PI / 180);
+  const selected = L.rectangle([[lat, lng], [lat + LAT_STEP, lng + lngStep]], {
+    color: 'yellow',
+    weight: 0.5,
+    fillColor: 'yellow',
+    fillOpacity: 0.4,
+    interactive: false
+  });
+  selectedSquareLayer.addLayer(selected);
+
+  if (claimedSquares.has(squareId)) {
+    showMessage(`This square <span class="id-chip">${squareId}</span> is already claimed.`, { showBuy: false });
+    return;
+  }
+
+  // Land/water check here...
+
+  showMessage(`This square <span class="id-chip">${squareId}</span> is unclaimed. You can buy it!`, {
+    showBuy: true,
+    onBuy: () => {
+      claimedSquares.add(squareId);
+      saveClaims();
+      renderClaimedInView();
+    }
+  });
 }
 
-const rect = L.rectangle(b, { color: '#2e7d32', weight: 0.6, fillColor: '#4caf50', fillOpacity: 0.35, interactive: false });
-
-const selected = L.rectangle([[lat, lng], [lat + LAT_STEP, lng + lngStep]], { color: 'yellow', weight: 0.5, fillColor: 'yellow', fillOpacity: 0.4, interactive: false });
+// When rendering claimed squares
+function renderClaimedInView() {
+  claimedLayer.clearLayers();
+  const bounds = map.getBounds();
+  for (const squareId of claimedSquares) {
+    const b = squareBoundsFromId(squareId);
+    if (bounds.intersects(L.latLngBounds(b))) {
+      const rect = L.rectangle(b, {
+        color: '#2e7d32',
+        weight: 0.6,
+        fillColor: '#4caf50',
+        fillOpacity: 0.35,
+        interactive: false
+      });
+      claimedLayer.addLayer(rect);
+    }
+  }
+}
