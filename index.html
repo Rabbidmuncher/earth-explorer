@@ -157,36 +157,38 @@
 
           const square = L.rectangle([[lat, lng], [lat + LAT_STEP, lng + lngStep]], { color: 'lightgray', weight: 0.5, dashArray: '2', fillOpacity: 0 });
 
-          square.on('click', async () => {
-            // Highlight selected
-            selectedSquareLayer.clearLayers();
-            const selected = L.rectangle([[lat, lng], [lat + LAT_STEP, lng + lngStep]], { color: 'yellow', weight: 0.5, fillColor: 'yellow', fillOpacity: 0.4 });
-            selectedSquareLayer.addLayer(selected);
-            selectedSquareId = squareId;
+square.on('click', async () => {
+  selectedSquareLayer.clearLayers();
+  const selected = L.rectangle(
+    [[lat, lng], [lat + LAT_STEP, lng + lngStep]], 
+    { color: 'yellow', weight: 0.5, fillColor: 'yellow', fillOpacity: 0.4 }
+  );
+  selectedSquareLayer.addLayer(selected);
+  selectedSquareId = squareId;
 
-            // If already claimed
-            if (claimedSquares.has(squareId)) {
-              showMessage(`This square <span class="id-chip">${squareId}</span> is already claimed.`, { showBuy: false });
-              return;
-            }
+  // Check if the square is already claimed
+  if (claimedSquares.has(squareId)) {
+    showMessage(`This square <span class="id-chip">${squareId}</span> is already claimed.`, { showBuy: false });
+    return;
+  }
 
-            // Land check
-            const land = await isLand(lat + LAT_STEP / 2, lng + (LAT_STEP / Math.cos(FIXED_LAT * Math.PI / 180)) / 2, squareId);
-            if (!land) {
-              showMessage(`This square <span class="id-chip">${squareId}</span> cannot be claimed.`, { showBuy: false });
-              return;
-            }
+  // Check land status
+  const land = await isLand(lat + LAT_STEP / 2, lng + (LAT_STEP / Math.cos(FIXED_LAT * Math.PI / 180)) / 2, squareId);
+  if (!land) {
+    showMessage(`This square <span class="id-chip">${squareId}</span> cannot be claimed.`, { showBuy: false });
+    return;
+  }
 
-            // Offer to buy
-            showMessage(`This square <span class="id-chip">${squareId}</span> is unclaimed. You can buy it!`, {
-              showBuy: true,
-              onBuy: () => {
-                claimedSquares.add(squareId);
-                saveClaims();
-                renderClaimedInView();
-              }
-            });
-          });
+  // Offer to buy
+  showMessage(`This square <span class="id-chip">${squareId}</span> is unclaimed. You can buy it!`, {
+    showBuy: true,
+    onBuy: () => {
+      claimedSquares.add(squareId);
+      saveClaims();
+      renderClaimedInView();
+    }
+  });
+});
 
           gridLayer.addLayer(square);
         }
