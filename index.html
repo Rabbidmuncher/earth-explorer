@@ -7,73 +7,23 @@
   <link rel="stylesheet" href="style.css" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
   <style>
-    body {
-      margin: 0;
-    }
+    body { margin: 0; }
     #sidebar {
-      width: 250px;
-      background: #f4f4f4;
-      border-right: 1px solid #ccc;
-      padding: 10px;
-      box-sizing: border-box;
-      transition: transform 0.3s ease;
-      position: absolute;
-      left: 0;
-      top: 0;
-      bottom: 0;
-      z-index: 999;
+      width: 250px; background: #f4f4f4; border-right: 1px solid #ccc; padding: 10px; box-sizing: border-box;
+      transition: transform 0.3s ease; position: absolute; left: 0; top: 0; bottom: 0; z-index: 999;
     }
-    #sidebar.collapsed {
-      transform: translateX(-100%);
-    }
-    #sidebar-toggle {
-      position: absolute;
-      bottom: 10px;
-      left: 10px;
-      background: #007bff;
-      color: white;
-      padding: 5px 10px;
-      border: none;
-      cursor: pointer;
-      z-index: 1001;
-      border-radius: 5px;
-    }
+    #sidebar.collapsed { transform: translateX(-100%); }
+    #sidebar-toggle { position: absolute; bottom: 10px; left: 10px; background: #007bff; color: white; padding: 5px 10px; border: none; cursor: pointer; z-index: 1001; border-radius: 5px; }
     #message-box {
-      position: fixed;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      background: #fff3cd;
-      color: #856404;
-      padding: 20px;
-      border: 1px solid #ffeeba;
-      border-radius: 8px;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-      display: none;
-      z-index: 1002;
-      text-align: center;
-      font-family: sans-serif;
+      position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+      background: #fff3cd; color: #856404; padding: 20px; border: 1px solid #ffeeba; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+      display: none; z-index: 1002; text-align: center; font-family: sans-serif;
     }
-    #message-box button {
-      margin: 10px 5px 0;
-      padding: 6px 12px;
-      border: none;
-      border-radius: 4px;
-      cursor: pointer;
-    }
-    #buy-btn {
-      background-color: #28a745;
-      color: white;
-    }
-    #cancel-btn, #ok-btn {
-      background-color: #dc3545;
-      color: white;
-    }
-    #map {
-      height: 100vh;
-      width: 100vw;
-      z-index: 0;
-    }
+    #message-box button { margin: 10px 5px 0; padding: 6px 12px; border: none; border-radius: 4px; cursor: pointer; }
+    #buy-btn { background-color: #28a745; color: white; }
+    #cancel-btn, #ok-btn { background-color: #dc3545; color: white; }
+    #map { height: 100vh; width: 100vw; z-index: 0; }
+    .id-chip { display: inline-block; background:#fff; border:1px solid #ffe08a; border-radius:4px; padding:2px 6px; font-family:monospace; }
   </style>
 </head>
 <body>
@@ -89,102 +39,109 @@
   <div id="map"></div>
   <div id="message-box">
     <p id="message-text">This square is unclaimed. You can buy it!</p>
-    <div id="message-actions">
-      <button id="buy-btn">Buy now</button>
-      <button id="cancel-btn">Cancel</button>
-    </div>
+    <div id="message-actions"></div>
   </div>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
   <script>
     document.getElementById('sidebar-toggle').addEventListener('click', function () {
-      const sidebar = document.getElementById('sidebar');
-      sidebar.classList.toggle('collapsed');
+      document.getElementById('sidebar').classList.toggle('collapsed');
     });
 
     const southWest = L.latLng(-85, -180);
     const northEast = L.latLng(85, 180);
     const bounds = L.latLngBounds(southWest, northEast);
 
-    const map = L.map('map', {
-      minZoom: 4,
-      maxZoom: 16,
-      maxBounds: bounds,
-      maxBoundsViscosity: 1.0
-    }).setView([56.95, 24.1], 6);
+    const map = L.map('map', { minZoom: 4, maxZoom: 16, maxBounds: bounds, maxBoundsViscosity: 1.0 }).setView([56.95, 24.1], 6);
 
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '&copy; OpenStreetMap contributors'
-    }).addTo(map);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; OpenStreetMap contributors' }).addTo(map);
 
     const gridLayer = L.layerGroup().addTo(map);
-    const LAT_STEP = 0.0045;
+    const selectedSquareLayer = L.layerGroup().addTo(map);
+    const claimedLayer = L.layerGroup().addTo(map);
+
+    const LAT_STEP = 0.0045; // ~500m north-south
     const ORIGIN_LAT = -85;
     const ORIGIN_LNG = -180;
-    const FIXED_LAT = 56.95;
+    const FIXED_LAT = 56.95; // for consistent lng spacing
+
+    // --- Persistence ---
+    const claimedSquares = new Set(JSON.parse(localStorage.getItem('claimedSquares') || '[]'));
+    function saveClaims() { localStorage.setItem('claimedSquares', JSON.stringify([...claimedSquares])); }
+
+    // --- Land cache ---
+    const landCache = new Map(); // key: squareId -> boolean
 
     let selectedSquareId = null;
-    const selectedSquareLayer = L.layerGroup().addTo(map);
 
-    function showMessage(text, showBuy = true) {
+    function showMessage(text, { showBuy = true, onBuy = null } = {}) {
       const box = document.getElementById('message-box');
       const msg = document.getElementById('message-text');
       const actions = document.getElementById('message-actions');
-      msg.innerText = text;
-      actions.innerHTML = '';
+      msg.innerHTML = text; actions.innerHTML = '';
 
       if (showBuy) {
         const buyBtn = document.createElement('button');
-        buyBtn.id = 'buy-btn';
-        buyBtn.innerText = 'Buy now';
-        buyBtn.onclick = () => {
-          alert('Buy functionality is not implemented yet.');
-          hideMessage();
-        };
-
+        buyBtn.id = 'buy-btn'; buyBtn.textContent = 'Buy now';
+        buyBtn.onclick = () => { if (onBuy) onBuy(); hideMessage(); };
         const cancelBtn = document.createElement('button');
-        cancelBtn.id = 'cancel-btn';
-        cancelBtn.innerText = 'Cancel';
+        cancelBtn.id = 'cancel-btn'; cancelBtn.textContent = 'Cancel';
         cancelBtn.onclick = hideMessage;
-
-        actions.appendChild(buyBtn);
-        actions.appendChild(cancelBtn);
+        actions.appendChild(buyBtn); actions.appendChild(cancelBtn);
       } else {
         const okBtn = document.createElement('button');
-        okBtn.id = 'ok-btn';
-        okBtn.innerText = 'OK';
-        okBtn.onclick = hideMessage;
+        okBtn.id = 'ok-btn'; okBtn.textContent = 'OK'; okBtn.onclick = hideMessage;
         actions.appendChild(okBtn);
       }
-
       box.style.display = 'block';
     }
+    function hideMessage() { document.getElementById('message-box').style.display = 'none'; }
 
-    function hideMessage() {
-      const box = document.getElementById('message-box');
-      box.style.display = 'none';
+    async function isLand(lat, lng, squareId) {
+      if (landCache.has(squareId)) return landCache.get(squareId);
+      try {
+        const res = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`, { headers: { 'Accept-Language': 'en' } });
+        const data = await res.json();
+        const land = !!data.address && !data.error;
+        landCache.set(squareId, land);
+        return land;
+      } catch (e) {
+        landCache.set(squareId, false);
+        return false;
+      }
     }
 
-    async function isLand(lat, lng) {
-      try {
-        const response = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`, {
-          headers: { 'Accept-Language': 'en' }
-        });
-        const data = await response.json();
-        return !!data.address && !data.error;
-      } catch (e) {
-        return false;
+    function squareBoundsFromId(squareId) {
+      const [latIdxStr, lngIdxStr] = squareId.split('_');
+      const latIdx = parseInt(latIdxStr, 10); const lngIdx = parseInt(lngIdxStr, 10);
+      const lngStep = LAT_STEP / Math.cos(FIXED_LAT * Math.PI / 180);
+      const lat = ORIGIN_LAT + latIdx * LAT_STEP; const lng = ORIGIN_LNG + lngIdx * lngStep;
+      return [[lat, lng], [lat + LAT_STEP, lng + lngStep]];
+    }
+
+    function renderClaimedInView() {
+      claimedLayer.clearLayers();
+      const bounds = map.getBounds();
+      const lngStep = LAT_STEP / Math.cos(FIXED_LAT * Math.PI / 180);
+      for (const squareId of claimedSquares) {
+        const b = squareBoundsFromId(squareId);
+        // quick intersection test with current view
+        const sw = L.latLng(b[0][0], b[0][1]);
+        const ne = L.latLng(b[1][0], b[1][1]);
+        if (bounds.intersects(L.latLngBounds(sw, ne))) {
+          const rect = L.rectangle(b, { color: '#2e7d32', weight: 0.6, fillColor: '#4caf50', fillOpacity: 0.35 });
+          claimedLayer.addLayer(rect);
+        }
       }
     }
 
     function drawGrid() {
       gridLayer.clearLayers();
-      if (map.getZoom() < 12) return;
+      if (map.getZoom() < 12) { claimedLayer.clearLayers(); selectedSquareLayer.clearLayers(); return; }
 
       const bounds = map.getBounds();
       const sw = bounds.getSouthWest();
       const ne = bounds.getNorthEast();
-
       const lngStep = LAT_STEP / Math.cos(FIXED_LAT * Math.PI / 180);
 
       const minLatIndex = Math.floor((sw.lat - ORIGIN_LAT) / LAT_STEP);
@@ -198,41 +155,44 @@
           const lng = ORIGIN_LNG + lngIdx * lngStep;
           const squareId = `${latIdx}_${lngIdx}`;
 
-          const square = L.rectangle(
-            [[lat, lng], [lat + LAT_STEP, lng + lngStep]],
-            {
-              color: 'lightgray',
-              weight: 0.5,
-              dashArray: '2',
-              fillOpacity: 0
-            }
-          );
+          const square = L.rectangle([[lat, lng], [lat + LAT_STEP, lng + lngStep]], { color: 'lightgray', weight: 0.5, dashArray: '2', fillOpacity: 0 });
 
           square.on('click', async () => {
+            // Highlight selected
             selectedSquareLayer.clearLayers();
-            const selected = L.rectangle(
-              [[lat, lng], [lat + LAT_STEP, lng + lngStep]],
-              {
-                color: 'yellow',
-                weight: 0.5,
-                fillColor: 'yellow',
-                fillOpacity: 0.4
-              }
-            );
+            const selected = L.rectangle([[lat, lng], [lat + LAT_STEP, lng + lngStep]], { color: 'yellow', weight: 0.5, fillColor: 'yellow', fillOpacity: 0.4 });
             selectedSquareLayer.addLayer(selected);
             selectedSquareId = squareId;
 
-            const land = await isLand(lat + LAT_STEP / 2, lng + lngStep / 2);
-            if (land) {
-              showMessage('This square is unclaimed. You can buy it!', true);
-            } else {
-              showMessage('This square cannot be claimed.', false);
+            // If already claimed
+            if (claimedSquares.has(squareId)) {
+              showMessage(`This square <span class="id-chip">${squareId}</span> is already claimed.`, { showBuy: false });
+              return;
             }
+
+            // Land check
+            const land = await isLand(lat + LAT_STEP / 2, lng + (LAT_STEP / Math.cos(FIXED_LAT * Math.PI / 180)) / 2, squareId);
+            if (!land) {
+              showMessage(`This square <span class="id-chip">${squareId}</span> cannot be claimed.`, { showBuy: false });
+              return;
+            }
+
+            // Offer to buy
+            showMessage(`This square <span class="id-chip">${squareId}</span> is unclaimed. You can buy it!`, {
+              showBuy: true,
+              onBuy: () => {
+                claimedSquares.add(squareId);
+                saveClaims();
+                renderClaimedInView();
+              }
+            });
           });
 
           gridLayer.addLayer(square);
         }
       }
+
+      renderClaimedInView();
     }
 
     map.on('moveend zoomend', drawGrid);
