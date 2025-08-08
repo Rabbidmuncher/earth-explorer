@@ -167,7 +167,7 @@ square.on('click', async () => {
   selectedSquareId = squareId;
 
   // Check if the square is already claimed
-  if (claimedSquares.has(squareId)) {
+   if (claimedSquares.has(squareId)) {
     showMessage(`This square <span class="id-chip">${squareId}</span> is already claimed.`, { showBuy: false });
     return;
   }
@@ -187,6 +187,9 @@ square.on('click', async () => {
       saveClaims();
       renderClaimedInView();
     }
+  cancelBtn.onclick = () => {
+    selectedSquareLayer.clearLayers();  // Uncheck the selected square
+    hideMessage();
   });
 });
 
