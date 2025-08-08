@@ -44,10 +44,12 @@
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
   <script>
+    // Sidebar toggle
     document.getElementById('sidebar-toggle').addEventListener('click', function () {
       document.getElementById('sidebar').classList.toggle('collapsed');
     });
 
+    // Map init + bounds
     const southWest = L.latLng(-85, -180);
     const northEast = L.latLng(85, 180);
     const bounds = L.latLngBounds(southWest, northEast);
@@ -56,25 +58,26 @@
 
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; OpenStreetMap contributors' }).addTo(map);
 
+    // Layers
     const gridLayer = L.layerGroup().addTo(map);
     const selectedSquareLayer = L.layerGroup().addTo(map);
     const claimedLayer = L.layerGroup().addTo(map);
 
+    // Grid constants
     const LAT_STEP = 0.0045; // ~500m north-south
     const ORIGIN_LAT = -85;
     const ORIGIN_LNG = -180;
     const FIXED_LAT = 56.95; // for consistent lng spacing
 
-    // --- Persistence ---
+    // Persistence
     const claimedSquares = new Set(JSON.parse(localStorage.getItem('claimedSquares') || '[]'));
     function saveClaims() { localStorage.setItem('claimedSquares', JSON.stringify([...claimedSquares])); }
 
-    // --- Land cache ---
+    // Land cache
     const landCache = new Map(); // key: squareId -> boolean
 
-    let selectedSquareId = null;
-
-    function showMessage(text, { showBuy = true, onBuy = null } = {}) {
+    // Message helpers
+    function showMessage(text, { showBuy = true, onBuy = null, onCancel = null } = {}) {
       const box = document.getElementById('message-box');
       const msg = document.getElementById('message-text');
       const actions = document.getElementById('message-actions');
@@ -86,11 +89,12 @@
         buyBtn.onclick = () => { if (onBuy) onBuy(); hideMessage(); };
         const cancelBtn = document.createElement('button');
         cancelBtn.id = 'cancel-btn'; cancelBtn.textContent = 'Cancel';
-        cancelBtn.onclick = hideMessage;
+        cancelBtn.onclick = () => { if (onCancel) onCancel(); hideMessage(); };
         actions.appendChild(buyBtn); actions.appendChild(cancelBtn);
       } else {
         const okBtn = document.createElement('button');
-        okBtn.id = 'ok-btn'; okBtn.textContent = 'OK'; okBtn.onclick = hideMessage;
+        okBtn.id = 'ok-btn'; okBtn.textContent = 'OK';
+        okBtn.onclick = () => { if (onCancel) onCancel(); hideMessage(); };
         actions.appendChild(okBtn);
       }
       box.style.display = 'block';
@@ -111,6 +115,7 @@
       }
     }
 
+    // Utilities
     function squareBoundsFromId(squareId) {
       const [latIdxStr, lngIdxStr] = squareId.split('_');
       const latIdx = parseInt(latIdxStr, 10); const lngIdx = parseInt(lngIdxStr, 10);
@@ -121,15 +126,13 @@
 
     function renderClaimedInView() {
       claimedLayer.clearLayers();
-      const bounds = map.getBounds();
-      const lngStep = LAT_STEP / Math.cos(FIXED_LAT * Math.PI / 180);
+      const view = map.getBounds();
       for (const squareId of claimedSquares) {
         const b = squareBoundsFromId(squareId);
-        // quick intersection test with current view
         const sw = L.latLng(b[0][0], b[0][1]);
         const ne = L.latLng(b[1][0], b[1][1]);
-        if (bounds.intersects(L.latLngBounds(sw, ne))) {
-          const rect = L.rectangle(b, { color: '#2e7d32', weight: 0.6, fillColor: '#4caf50', fillOpacity: 0.35 });
+        if (view.intersects(L.latLngBounds(sw, ne))) {
+          const rect = L.rectangle(b, { color: '#2e7d32', weight: 0.6, fillColor: '#4caf50', fillOpacity: 0.35, interactive: false });
           claimedLayer.addLayer(rect);
         }
       }
@@ -137,7 +140,8 @@
 
     function drawGrid() {
       gridLayer.clearLayers();
-      if (map.getZoom() < 12) { claimedLayer.clearLayers(); selectedSquareLayer.clearLayers(); return; }
+      selectedSquareLayer.clearLayers();
+      if (map.getZoom() < 12) { claimedLayer.clearLayers(); return; }
 
       const bounds = map.getBounds();
       const sw = bounds.getSouthWest();
@@ -157,38 +161,36 @@
 
           const square = L.rectangle([[lat, lng], [lat + LAT_STEP, lng + lngStep]], { color: 'lightgray', weight: 0.5, dashArray: '2', fillOpacity: 0 });
 
-square.on('click', async () => {
-  selectedSquareLayer.clearLayers();
-  const selected = L.rectangle(
-    [[lat, lng], [lat + LAT_STEP, lng + lngStep]], 
-    { color: 'yellow', weight: 0.5, fillColor: 'yellow', fillOpacity: 0.4 }
-  );
-  selectedSquareLayer.addLayer(selected);
-  selectedSquareId = squareId;
+          square.on('click', async () => {
+            // Clear previous selection and draw yellow selection overlay (non-interactive)
+            selectedSquareLayer.clearLayers();
+            const selected = L.rectangle([[lat, lng], [lat + LAT_STEP, lng + lngStep]], { color: 'yellow', weight: 0.5, fillColor: 'yellow', fillOpacity: 0.4, interactive: false });
+            selectedSquareLayer.addLayer(selected);
 
-  // Check if the square is already claimed
-   if (claimedSquares.has(squareId)) {
-    showMessage(`This square <span class="id-chip">${squareId}</span> is already claimed.`, { showBuy: false });
-    return;
-  }
+            // Already claimed? Show message and exit
+            if (claimedSquares.has(squareId)) {
+              showMessage(`This square <span class="id-chip">${squareId}</span> is already claimed.`, { showBuy: false, onCancel: () => selectedSquareLayer.clearLayers() });
+              return;
+            }
 
-  // Check land status
-  const land = await isLand(lat + LAT_STEP / 2, lng + (LAT_STEP / Math.cos(FIXED_LAT * Math.PI / 180)) / 2, squareId);
-  if (!land) {
-    showMessage(`This square <span class="id-chip">${squareId}</span> cannot be claimed.`, { showBuy: false });
-    return;
-  }
+            // Land check
+            const land = await isLand(lat + LAT_STEP / 2, lng + (lngStep / 2), squareId);
+            if (!land) {
+              showMessage(`This square <span class="id-chip">${squareId}</span> cannot be claimed.`, { showBuy: false, onCancel: () => selectedSquareLayer.clearLayers() });
+              return;
+            }
 
-  // Offer to buy
-  showMessage(`This square <span class="id-chip">${squareId}</span> is unclaimed. You can buy it!`, {
-    showBuy: true,
-    onBuy: () => {
-      claimedSquares.add(squareId);
-      saveClaims();
-      renderClaimedInView();
-    }
-  });
-});
+            // Offer to buy
+            showMessage(`This square <span class="id-chip">${squareId}</span> is unclaimed. You can buy it!`, {
+              showBuy: true,
+              onBuy: () => {
+                claimedSquares.add(squareId);
+                saveClaims();
+                renderClaimedInView();
+              },
+              onCancel: () => selectedSquareLayer.clearLayers()
+            });
+          });
 
           gridLayer.addLayer(square);
         }
