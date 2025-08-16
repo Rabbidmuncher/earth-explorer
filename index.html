@@ -32,17 +32,14 @@
     
     <!-- Sign In / Sign Out Section -->
     <div id="auth-section">
-      <!-- Initially, show Sign-in button -->
       <button id="sign-in-btn">Sign In</button>
-
-      <!-- When signed in, show email and Sign-out button -->
       <div id="user-info" style="display: none;">
         <p id="user-email"></p>
         <button id="sign-out-btn">Sign Out</button>
       </div>
     </div>
   </div>
-  
+
   <button id="sidebar-toggle">☰</button>
   <div id="map"></div>
   <div id="message-box">
@@ -59,7 +56,7 @@
 
   <script>
   (async () => {
-    // Firebase init
+    // --- Initialize Firebase ---
     const firebaseConfig = {
       apiKey: "AIzaSyAGfbHqXBlctPr0edOyXlhVr4RtlK37xmk",
       authDomain: "picture-the-world.firebaseapp.com",
@@ -69,18 +66,19 @@
     firebase.initializeApp(firebaseConfig);
     const auth = firebase.auth();
 
-    // Elements for Sign-In / Sign-Out
+    // --- Map initialization ---
+    const southWest = L.latLng(-85, -180);
+    const northEast = L.latLng(85, 180);
+    const bounds = L.latLngBounds(southWest, northEast);
+    const map = L.map('map', { minZoom: 4, maxZoom: 16, maxBounds: bounds, maxBoundsViscosity: 1.0 }).setView([56.95, 24.1], 6);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; OpenStreetMap contributors' }).addTo(map);
+
+    // --- Handle Authentication ---
     const signInBtn = document.getElementById('sign-in-btn');
     const signOutBtn = document.getElementById('sign-out-btn');
     const userInfo = document.getElementById('user-info');
     const userEmail = document.getElementById('user-email');
 
-    // Sidebar toggle
-    document.getElementById('sidebar-toggle').addEventListener('click', function () {
-      document.getElementById('sidebar').classList.toggle('collapsed');
-    });
-
-    // Listen for auth state changes
     auth.onAuthStateChanged(user => {
       if (user) {
         userEmail.textContent = user.email;
@@ -92,7 +90,7 @@
       }
     });
 
-    // Sign In function (using Google Sign-In)
+    // --- Sign In/Sign Out functions ---
     async function signIn() {
       try {
         const provider = new firebase.auth.GoogleAuthProvider();
@@ -102,7 +100,6 @@
       }
     }
 
-    // Sign Out function
     async function signOut() {
       try {
         await auth.signOut();
@@ -112,28 +109,12 @@
       }
     }
 
-    // Event listeners for Sign-In and Sign-Out buttons
     signInBtn.addEventListener('click', signIn);
     signOutBtn.addEventListener('click', signOut);
 
-    // --- Map initialization ---
-    const southWest = L.latLng(-85, -180);
-    const northEast = L.latLng(85, 180);
-    const bounds = L.latLngBounds(southWest, northEast);
-    const map = L.map('map', { minZoom: 4, maxZoom: 16, maxBounds: bounds, maxBoundsViscosity: 1.0 }).setView([56.95, 24.1], 6);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; OpenStreetMap contributors' }).addTo(map);
-
-    // Layers
+    // --- Map grid rendering ---
     const gridLayer = L.layerGroup().addTo(map);
-    const selectedSquareLayer = L.layerGroup().addTo(map);
-    const claimedLayer = L.layerGroup().addTo(map);
 
-    // Grid constants
-    const LAT_STEP = 0.0045; // ~500m N-S
-    const ORIGIN_LAT = -85;
-    const ORIGIN_LNG = -180;
-
-    // Render grid
     function drawGrid() {
       gridLayer.clearLayers();
       if (map.getZoom() < 12) return;
@@ -141,6 +122,10 @@
       const bounds = map.getBounds();
       const sw = bounds.getSouthWest();
       const ne = bounds.getNorthEast();
+
+      const LAT_STEP = 0.0045; // ~500m N-S
+      const ORIGIN_LAT = -85;
+      const ORIGIN_LNG = -180;
 
       const minLatIndex = Math.floor((sw.lat - ORIGIN_LAT) / LAT_STEP);
       const maxLatIndex = Math.ceil((ne.lat - ORIGIN_LAT) / LAT_STEP);
