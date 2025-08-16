@@ -29,7 +29,20 @@
       <li><a href="#">User Information</a></li>
       <li><a href="#">Terms and Conditions</a></li>
     </ul>
+    
+    <!-- Sign In / Sign Out Section -->
+    <div id="auth-section">
+      <!-- Initially, show Sign-in button -->
+      <button id="sign-in-btn">Sign In</button>
+
+      <!-- When signed in, show email and Sign-out button -->
+      <div id="user-info" style="display: none;">
+        <p id="user-email"></p>
+        <button id="sign-out-btn">Sign Out</button>
+      </div>
+    </div>
   </div>
+  
   <button id="sidebar-toggle">☰</button>
   <div id="map"></div>
   <div id="message-box">
@@ -61,7 +74,51 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
     const auth = firebase.auth();
-    try { await auth.signInAnonymously(); } catch(e) { console.error('Anon auth failed', e); }
+
+    // Elements in the sidebar
+    const signInBtn = document.getElementById('sign-in-btn');
+    const signOutBtn = document.getElementById('sign-out-btn');
+    const userInfo = document.getElementById('user-info');
+    const userEmail = document.getElementById('user-email');
+
+    // Listen for auth state changes
+    auth.onAuthStateChanged(user => {
+      if (user) {
+        // If user is signed in, show email and Sign-out button
+        userEmail.textContent = user.email;
+        userInfo.style.display = 'block';
+        signInBtn.style.display = 'none';
+      } else {
+        // If user is not signed in, show Sign-in button
+        userInfo.style.display = 'none';
+        signInBtn.style.display = 'block';
+      }
+    });
+
+    // Sign In function (using Google Sign-In for simplicity)
+    async function signIn() {
+      try {
+        const provider = new firebase.auth.GoogleAuthProvider();
+        await auth.signInWithPopup(provider);
+      } catch (e) {
+        console.error("Error signing in: ", e);
+      }
+    }
+
+    // Sign Out function
+    async function signOut() {
+      try {
+        await auth.signOut();
+        alert("You have been logged out.");
+      } catch (e) {
+        console.error("Error signing out: ", e);
+      }
+    }
+
+    // Event listeners for Sign-In and Sign-Out buttons
+    signInBtn.addEventListener('click', signIn);
+    signOutBtn.addEventListener('click', signOut);
+  })();
 
     // --- Map init + bounds ---
     const southWest = L.latLng(-85, -180);
