@@ -59,12 +59,7 @@
 
   <script>
   (async () => {
-    // Sidebar toggle
-    document.getElementById('sidebar-toggle').addEventListener('click', function () {
-      document.getElementById('sidebar').classList.toggle('collapsed');
-    });
-
-    // --- Firebase init (FILL THESE VALUES FROM YOUR FIREBASE CONSOLE) ---
+    // Firebase init
     const firebaseConfig = {
       apiKey: "AIzaSyAGfbHqXBlctPr0edOyXlhVr4RtlK37xmk",
       authDomain: "picture-the-world.firebaseapp.com",
@@ -72,30 +67,32 @@
       appId: "1:308871819729:web:867a0bd8ad9b3c2bc330f0"
     };
     firebase.initializeApp(firebaseConfig);
-    const db = firebase.firestore();
     const auth = firebase.auth();
 
-    // Elements in the sidebar
+    // Elements for Sign-In / Sign-Out
     const signInBtn = document.getElementById('sign-in-btn');
     const signOutBtn = document.getElementById('sign-out-btn');
     const userInfo = document.getElementById('user-info');
     const userEmail = document.getElementById('user-email');
 
+    // Sidebar toggle
+    document.getElementById('sidebar-toggle').addEventListener('click', function () {
+      document.getElementById('sidebar').classList.toggle('collapsed');
+    });
+
     // Listen for auth state changes
     auth.onAuthStateChanged(user => {
       if (user) {
-        // If user is signed in, show email and Sign-out button
         userEmail.textContent = user.email;
         userInfo.style.display = 'block';
         signInBtn.style.display = 'none';
       } else {
-        // If user is not signed in, show Sign-in button
         userInfo.style.display = 'none';
         signInBtn.style.display = 'block';
       }
     });
 
-    // Sign In function (using Google Sign-In for simplicity)
+    // Sign In function (using Google Sign-In)
     async function signIn() {
       try {
         const provider = new firebase.auth.GoogleAuthProvider();
@@ -118,9 +115,8 @@
     // Event listeners for Sign-In and Sign-Out buttons
     signInBtn.addEventListener('click', signIn);
     signOutBtn.addEventListener('click', signOut);
-  })();
 
-    // --- Map init + bounds ---
+    // --- Map initialization ---
     const southWest = L.latLng(-85, -180);
     const northEast = L.latLng(85, 180);
     const bounds = L.latLngBounds(southWest, northEast);
@@ -136,143 +132,32 @@
     const LAT_STEP = 0.0045; // ~500m N-S
     const ORIGIN_LAT = -85;
     const ORIGIN_LNG = -180;
-    const FIXED_LAT = 56.95; // for consistent lng spacing
 
-    // Firestore-backed claimed set
-    const claimedSquares = new Set();
-    db.collection('claims').onSnapshot((snap) => {
-      claimedSquares.clear();
-      snap.forEach(doc => claimedSquares.add(doc.id));
-      renderClaimedInView();
-    });
-
-    // Land cache
-    const landCache = new Map(); // key: squareId -> boolean
-
-    // Message helpers
-    function showMessage(text, { showBuy = true, onBuy = null, onCancel = null } = {}) {
-      const box = document.getElementById('message-box');
-      const msg = document.getElementById('message-text');
-      const actions = document.getElementById('message-actions');
-      msg.innerHTML = text; actions.innerHTML = '';
-      if (showBuy) {
-        const buyBtn = document.createElement('button');
-        buyBtn.id = 'buy-btn'; buyBtn.textContent = 'Buy now';
-        buyBtn.onclick = async () => { if (onBuy) await onBuy(); hideMessage(); };
-        const cancelBtn = document.createElement('button');
-        cancelBtn.id = 'cancel-btn'; cancelBtn.textContent = 'Cancel';
-        cancelBtn.onclick = () => { if (onCancel) onCancel(); hideMessage(); };
-        actions.appendChild(buyBtn); actions.appendChild(cancelBtn);
-      } else {
-        const okBtn = document.createElement('button');
-        okBtn.id = 'ok-btn'; okBtn.textContent = 'OK';
-        okBtn.onclick = () => { if (onCancel) onCancel(); hideMessage(); };
-        actions.appendChild(okBtn);
-      }
-      box.style.display = 'block';
-    }
-    function hideMessage() { document.getElementById('message-box').style.display = 'none'; }
-
-    async function isLand(lat, lng, squareId) {
-      if (landCache.has(squareId)) return landCache.get(squareId);
-      try {
-        const res = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`, { headers: { 'Accept-Language': 'en' } });
-        const data = await res.json();
-        const land = !!data.address && !data.error;
-        landCache.set(squareId, land);
-        return land;
-      } catch (e) { landCache.set(squareId, false); return false; }
-    }
-
-    function lngStepAtFixedLat() {
-      return LAT_STEP / Math.cos(FIXED_LAT * Math.PI / 180);
-    }
-
-    function squareBoundsFromId(squareId) {
-      const [latIdxStr, lngIdxStr] = squareId.split('_');
-      const latIdx = parseInt(latIdxStr, 10); const lngIdx = parseInt(lngIdxStr, 10);
-      const lngStep = lngStepAtFixedLat();
-      const lat = ORIGIN_LAT + latIdx * LAT_STEP; const lng = ORIGIN_LNG + lngIdx * lngStep;
-      return [[lat, lng], [lat + LAT_STEP, lng + lngStep]];
-    }
-
-    function renderClaimedInView() {
-      claimedLayer.clearLayers();
-      const view = map.getBounds();
-      for (const squareId of claimedSquares) {
-        const b = squareBoundsFromId(squareId);
-        const sw = L.latLng(b[0][0], b[0][1]);
-        const ne = L.latLng(b[1][0], b[1][1]);
-        if (view.intersects(L.latLngBounds(sw, ne))) {
-          const rect = L.rectangle(b, { color: '#2e7d32', weight: 0.6, fillColor: '#4caf50', fillOpacity: 0.35, interactive: false });
-          claimedLayer.addLayer(rect);
-        }
-      }
-    }
-
+    // Render grid
     function drawGrid() {
       gridLayer.clearLayers();
-      selectedSquareLayer.clearLayers();
-      if (map.getZoom() < 12) { claimedLayer.clearLayers(); return; }
+      if (map.getZoom() < 12) return;
 
       const bounds = map.getBounds();
       const sw = bounds.getSouthWest();
       const ne = bounds.getNorthEast();
-      const lngStep = lngStepAtFixedLat();
 
       const minLatIndex = Math.floor((sw.lat - ORIGIN_LAT) / LAT_STEP);
       const maxLatIndex = Math.ceil((ne.lat - ORIGIN_LAT) / LAT_STEP);
-      const minLngIndex = Math.floor((sw.lng - ORIGIN_LNG) / lngStep);
-      const maxLngIndex = Math.ceil((ne.lng - ORIGIN_LNG) / lngStep);
+      const minLngIndex = Math.floor((sw.lng - ORIGIN_LNG) / LAT_STEP);
+      const maxLngIndex = Math.ceil((ne.lng - ORIGIN_LNG) / LAT_STEP);
 
       for (let latIdx = minLatIndex; latIdx < maxLatIndex; latIdx++) {
         for (let lngIdx = minLngIndex; lngIdx < maxLngIndex; lngIdx++) {
           const lat = ORIGIN_LAT + latIdx * LAT_STEP;
-          const lng = ORIGIN_LNG + lngIdx * lngStep;
+          const lng = ORIGIN_LNG + lngIdx * LAT_STEP;
           const squareId = `${latIdx}_${lngIdx}`;
 
-          const square = L.rectangle([[lat, lng], [lat + LAT_STEP, lng + lngStep]], { color: 'lightgray', weight: 0.5, dashArray: '2', fillOpacity: 0 });
-
-          square.on('click', async () => {
-            // Draw selection (non-interactive so clicks pass through)
-            selectedSquareLayer.clearLayers();
-            const selected = L.rectangle([[lat, lng], [lat + LAT_STEP, lng + lngStep]], { color: 'yellow', weight: 0.5, fillColor: 'yellow', fillOpacity: 0.4, interactive: false });
-            selectedSquareLayer.addLayer(selected);
-
-            // Already claimed?
-            if (claimedSquares.has(squareId)) {
-              showMessage(`This square <span class="id-chip">${squareId}</span> is already claimed.`, { showBuy: false, onCancel: () => selectedSquareLayer.clearLayers() });
-              return;
-            }
-
-            // Land check
-            const land = await isLand(lat + LAT_STEP / 2, lng + (lngStep / 2), squareId);
-            if (!land) {
-              showMessage(`This square <span class="id-chip">${squareId}</span> cannot be claimed.`, { showBuy: false, onCancel: () => selectedSquareLayer.clearLayers() });
-              return;
-            }
-
-            // Offer to buy -> write to Firestore
-            showMessage(`This square <span class="id-chip">${squareId}</span> is unclaimed. You can buy it!`, {
-              showBuy: true,
-              onBuy: async () => {
-                const uid = auth.currentUser?.uid || null;
-                await db.collection('claims').doc(squareId).set({
-                  owner: uid,
-                  status: 'claimed',
-                  createdAt: firebase.firestore.FieldValue.serverTimestamp()
-                }, { merge: false });
-                // onSnapshot will repaint
-              },
-              onCancel: () => selectedSquareLayer.clearLayers()
-            });
-          });
+          const square = L.rectangle([[lat, lng], [lat + LAT_STEP, lng + LAT_STEP]], { color: 'lightgray', weight: 0.5, dashArray: '2', fillOpacity: 0 });
 
           gridLayer.addLayer(square);
         }
       }
-
-      renderClaimedInView();
     }
 
     map.on('moveend zoomend', drawGrid);
