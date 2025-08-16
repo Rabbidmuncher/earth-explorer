@@ -14,3 +14,24 @@ h1 {
     height: 700px;
     width: 100%;
 }
+
+#auth-section {
+  margin-top: 20px;
+}
+
+#auth-section button {
+  width: 100%;
+  padding: 8px;
+  margin-bottom: 10px;
+}
+
+#user-info {
+  display: none;
+  text-align: center;
+}
+
+#user-email {
+  font-size: 14px;
+  color: #007bff;
+  margin-bottom: 10px;
+}
