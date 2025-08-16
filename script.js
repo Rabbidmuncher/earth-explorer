@@ -55,3 +55,64 @@ function renderClaimedInView() {
     }
   }
 }
+(async () => {
+  // Firebase initialization
+  const firebaseConfig = {
+    apiKey: "YOUR_API_KEY",
+    authDomain: "YOUR_PROJECT.firebaseapp.com",
+    projectId: "YOUR_PROJECT_ID",
+    appId: "YOUR_APP_ID"
+  };
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.firestore();
+  const auth = firebase.auth();
+
+  // Sidebar toggle
+  document.getElementById('sidebar-toggle').addEventListener('click', function () {
+    document.getElementById('sidebar').classList.toggle('collapsed');
+  });
+
+  // Elements in the sidebar
+  const signInBtn = document.getElementById('sign-in-btn');
+  const signOutBtn = document.getElementById('sign-out-btn');
+  const userInfo = document.getElementById('user-info');
+  const userEmail = document.getElementById('user-email');
+
+  // Listen for auth state changes
+  auth.onAuthStateChanged(user => {
+    if (user) {
+      // If user is signed in, show email and Sign-out button
+      userEmail.textContent = user.email;
+      userInfo.style.display = 'block';
+      signInBtn.style.display = 'none';
+    } else {
+      // If user is not signed in, show Sign-in button
+      userInfo.style.display = 'none';
+      signInBtn.style.display = 'block';
+    }
+  });
+
+  // Sign In function (using Google Sign-In for simplicity)
+  async function signIn() {
+    try {
+      const provider = new firebase.auth.GoogleAuthProvider();
+      await auth.signInWithPopup(provider);
+    } catch (e) {
+      console.error("Error signing in: ", e);
+    }
+  }
+
+  // Sign Out function
+  async function signOut() {
+    try {
+      await auth.signOut();
+      alert("You have been logged out.");
+    } catch (e) {
+      console.error("Error signing out: ", e);
+    }
+  }
+
+  // Event listeners for Sign-In and Sign-Out buttons
+  signInBtn.addEventListener('click', signIn);
+  signOutBtn.addEventListener('click', signOut);
+})();
