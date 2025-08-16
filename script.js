@@ -1,10 +1,10 @@
 (async () => {
   // Firebase initialization
   const firebaseConfig = {
-    apiKey: "YOUR_API_KEY",
-    authDomain: "YOUR_PROJECT.firebaseapp.com",
-    projectId: "YOUR_PROJECT_ID",
-    appId: "YOUR_APP_ID"
+      apiKey: "AIzaSyAGfbHqXBlctPr0edOyXlhVr4RtlK37xmk",
+      authDomain: "picture-the-world.firebaseapp.com",
+      projectId: "picture-the-world",
+      appId: "1:308871819729:web:867a0bd8ad9b3c2bc330f0"
   };
   firebase.initializeApp(firebaseConfig);
   const db = firebase.firestore();
