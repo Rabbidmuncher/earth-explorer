@@ -125,12 +125,12 @@
     const selectedSquareLayer = L.layerGroup().addTo(map);
     const claimedLayer = L.layerGroup().addTo(map);
 
-    // Grid constants
+    // Grid constants (500 x 500 meters)
     const LAT_STEP = 0.0045; // ~500m N-S
     const ORIGIN_LAT = -85;
     const ORIGIN_LNG = -180;
 
-    // --- Handle grid and claims ---
+    // Handle claimed squares
     const claimedSquares = new Set();
 
     db.collection('claims').onSnapshot((snap) => {
